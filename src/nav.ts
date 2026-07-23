@@ -3,6 +3,7 @@
 // router — navigation is real links between real documents, native back button).
 import { VERSION } from './version';
 import { currentTheme, toggleTheme } from './theme';
+import { measure } from './measure/measure';
 
 interface Tab {
   readonly href: string;
@@ -22,6 +23,7 @@ const TABS: readonly Tab[] = [
     label: 'Standards',
     match: /^\/(reference|chassis|brand|pwa|agent-method)\.html$/,
   },
+  { href: '/metrics.html', label: 'Metrics', match: /^\/metrics\.html$/ },
   { href: '/settings.html', label: 'Settings', match: /^\/settings\.html$/ },
 ];
 
@@ -50,6 +52,7 @@ function renderTopbar(): HTMLElement {
   paint();
   theme.addEventListener('click', () => {
     toggleTheme();
+    measure.record('feature_theme_toggle');
     paint();
   });
 

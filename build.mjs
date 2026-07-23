@@ -77,6 +77,7 @@ const PAGES = [
     jsToken: '%AGENT_METHOD_JS%',
     sriToken: '%AGENT_METHOD_JS_SRI%',
   },
+  { html: 'metrics.html', entry: 'src/pages/metrics.ts', jsToken: '%METRICS_JS%', sriToken: '%METRICS_JS_SRI%' },
 ];
 
 rmSync(dist, { recursive: true, force: true });

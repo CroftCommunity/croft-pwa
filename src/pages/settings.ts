@@ -6,6 +6,7 @@ import { registerServiceWorker } from '../sw-register';
 import { currentTheme, toggleTheme, type Theme } from '../theme';
 import { VERSION } from '../version';
 import { log } from '../log';
+import { measure } from '../measure/measure';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -44,6 +45,7 @@ function content(): HTMLElement {
 
 const app = document.getElementById('app');
 if (!app) throw new Error('settings: #app not found');
+measure.record('page_settings');
 mountShell(app, content());
 registerServiceWorker();
 log.info('shell mounted', 'settings');

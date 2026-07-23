@@ -4,9 +4,11 @@ import { registerServiceWorker } from '../sw-register';
 import { log } from '../log';
 import { GUIDE } from './guide-content';
 import { renderGuide } from './user-guide-view';
+import { measure } from '../measure/measure';
 
 const app = document.getElementById('app');
 if (!app) throw new Error('user-guide: #app not found');
+measure.record('page_guide');
 mountShell(
   app,
   renderGuide(GUIDE, {

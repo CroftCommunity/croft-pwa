@@ -3,6 +3,7 @@
 import { mountShell } from '../nav';
 import { registerServiceWorker } from '../sw-register';
 import { log } from '../log';
+import { measure } from '../measure/measure';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -76,6 +77,7 @@ function content(): HTMLElement {
 
 const app = document.getElementById('app');
 if (!app) throw new Error('reference: #app not found');
+measure.record('page_standards');
 mountShell(app, content());
 registerServiceWorker();
 log.info('shell mounted', 'reference');

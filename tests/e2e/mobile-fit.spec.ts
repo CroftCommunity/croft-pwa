@@ -13,6 +13,7 @@ for (const width of [320, 360, 390]) {
     '/brand.html',
     '/pwa.html',
     '/agent-method.html',
+    '/metrics.html',
   ]) {
     test(`no horizontal overflow: ${path} at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 780 });
