@@ -58,6 +58,24 @@ export const CHASSIS: readonly GuideEntry[] = [
     ],
   },
   {
+    testid: 'chassis-paths',
+    title: 'Relative paths, always',
+    toc: 'Relative paths',
+    blocks: [
+      {
+        kind: 'prose',
+        text:
+          'Every asset reference, navigation link, and the service worker use ' +
+          'relative paths — never an absolute path from the domain root. This is ' +
+          'what lets the exact same build run at a domain root or under a subpath, ' +
+          'which is how a project page and the per-PR preview (served under a ' +
+          '/pr-preview/ path) work. The build fails if a page emits an ' +
+          'absolute-root path, and a test serves the site under a subpath to prove ' +
+          'it holds.',
+      },
+    ],
+  },
+  {
     testid: 'chassis-sw',
     title: 'A service worker that never strands a fix',
     toc: 'Service worker',

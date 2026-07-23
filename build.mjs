@@ -190,6 +190,17 @@ for (const p of PAGES) {
     .replaceAll('%STYLES_SRI%', stylesSri)
     .replaceAll(p.jsToken, pageHrefs[p.entry])
     .replaceAll(p.sriToken, jsSri[p.entry]);
+  // Standard: paths are RELATIVE, so the site works at a domain root or under a
+  // subpath (GitHub project pages, and the /pr-preview/pr-N/ preview workflow).
+  // An absolute-root href/src would 404 under a subpath — fail the build, not the
+  // deploy. (See docs/PRACTICES.md → "Relative paths".)
+  const absolute = html.match(/(?:href|src)="\/[^"]*"/g);
+  if (absolute) {
+    throw new Error(
+      `build: ${p.html} has absolute-root asset path(s) ${JSON.stringify(absolute)} — ` +
+        `use a relative path so the site works under a subpath.`,
+    );
+  }
   writeFileSync(join(dist, p.html), html);
 }
 

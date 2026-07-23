@@ -44,6 +44,13 @@ CI is immune (it never reuses a server).
   `tests/unit/brand-nohex.test.ts`. New colours are added to `tokens.css` with a
   recorded WCAG ratio (asserted by `tests/unit/brand-tokens.test.ts`), never
   invented inline. See `docs/DESIGN.md`.
+- **Relative paths, always.** No absolute-root paths (`/assets/…`, `/sw.js`,
+  `/x.html`) — every asset ref, nav href, the manifest, and the SW registration
+  are relative, so the same build runs at a domain root or under a subpath (a
+  GitHub project page, and the `/pr-preview/pr-N/` preview workflow). The build
+  throws on an absolute-root asset path, and `tests/e2e/subpath.spec.ts` serves
+  the site under a subpath to prove it. Match the active tab by page basename,
+  not by absolute pathname.
 - **Pages, not modals.** Navigation is real links between real documents (native
   back button). No client router, no focus-trapping overlays — inline reveals
   and transient toasts only.

@@ -19,6 +19,28 @@ stylesheet, injects the CSP + SRI + version into each HTML shell, and generates
 a version-stamped service worker with a precache manifest keyed to the exact
 build. Hashed asset names make a stale subresource structurally impossible.
 
+## Relative paths (subpath-portable)
+
+Every path is **relative** — asset references, navigation hrefs, the manifest
+(`start_url`/`scope`/icons), and the service-worker registration and precache.
+No path starts from the domain root. This is a hard standard, for one reason: the
+same build must run unchanged at a domain root **and** under a subpath. Two real
+deploys need the subpath case:
+
+- a **GitHub project page** is served under `/<repo>/` (e.g. `/croft-pwa/`);
+- the **per-PR preview** workflow serves a build under `/pr-preview/pr-N/`.
+
+An absolute path like `/assets/app.js` resolves to the domain root and 404s under
+either — a blank page. So:
+
+- The build **fails** if any emitted page contains an absolute-root `href`/`src`.
+- The active nav tab is matched by page **basename**, not by absolute pathname.
+- `tests/e2e/subpath.spec.ts` serves the build under a subpath and asserts it
+  renders with zero failed requests and that relative nav stays within the subpath.
+
+The local root-served gate alone will not catch an absolute-path regression —
+that is exactly why the subpath test and the build check exist.
+
 ## Service worker recipe
 
 The routing decision is a pure function (`src/sw-nav.ts`), unit-tested apart

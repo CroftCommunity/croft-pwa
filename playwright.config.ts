@@ -8,6 +8,11 @@ const SANDBOX_CHROMIUM = '/opt/pw-browsers/chromium';
 const executablePath = existsSync(SANDBOX_CHROMIUM) ? SANDBOX_CHROMIUM : undefined;
 
 const PORT = 4173;
+// A second server serves the same build under a subpath, emulating a GitHub
+// project page / the /pr-preview/pr-N/ preview workflow, so the relative-path
+// standard is guarded (see tests/e2e/subpath.spec.ts).
+const SUBPATH_PORT = 4174;
+const SUBPATH_BASE = '/pr-preview/pr-1';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -26,16 +31,35 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: /subpath\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         ...(executablePath ? { launchOptions: { executablePath } } : {}),
       },
     },
+    {
+      // Runs the site under a subpath to prove relative paths hold there.
+      name: 'subpath',
+      testMatch: /subpath\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://localhost:${SUBPATH_PORT}${SUBPATH_BASE}/`,
+        ...(executablePath ? { launchOptions: { executablePath } } : {}),
+      },
+    },
   ],
-  webServer: {
-    command: `node tools/serve.mjs dist ${PORT}`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-  },
+  webServer: [
+    {
+      command: `node tools/serve.mjs dist ${PORT}`,
+      url: `http://localhost:${PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+    {
+      command: `BASE=${SUBPATH_BASE} node tools/serve.mjs dist ${SUBPATH_PORT}`,
+      url: `http://localhost:${SUBPATH_PORT}${SUBPATH_BASE}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+  ],
 });
