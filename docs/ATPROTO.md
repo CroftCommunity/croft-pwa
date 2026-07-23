@@ -44,14 +44,29 @@ directly from an arbitrary PDS needs a header-level CSP or a per-host relaxation
   never in push CI. Needs real browser egress; where a sandbox resets
   headless-Chromium TLS, the module is verified live via node instead.
 
-## Deliberately staged (the auth phase)
+## Sealed box — privacy in public (shipped)
+
+`src/crypto/sealedbox.ts` (ported from skylite): a record can live in a public
+repo yet stay private — seal it to a recipient's **public** key, and only the
+matching **private** key opens it. Ephemeral ECDH(P-256) → HKDF-SHA256 →
+AES-256-GCM, all WebCrypto, no dependencies. A fresh ephemeral per message means
+two seals of the same text differ; a wrong key or any tampering fails the GCM
+auth tag. `assertPublicJwk` refuses to treat a private key (a JWK with `d`) as a
+public one, so a private key can never be published by accident. Unit-tested
+(round-trip, uniqueness, wrong-key, tamper, reject-private-key) and demonstrated
+live on `/atproto.html`.
+
+The key-at-rest **vault** (WebAuthn-PRF / passphrase wrap that protects the
+private key) is the layer that pairs with real encrypted writes — staged with the
+write path below.
+
+## Deliberately staged (the rest of the auth phase)
 
 Not yet in croft-pwa; **skylite is the reference** until they land:
 
 - **OAuth** for a public SPA client — PKCE + PAR + DPoP, a hosted
   `client-metadata.json`, rotating refresh, `sub`-verification.
-- **DPoP-authenticated writes** to the user's own repo (`putRecord`/`createRecord`).
+- **DPoP-authenticated writes** to the user's own repo (`putRecord`/`createRecord`),
+  and the sealed-box **vault** (key-at-rest protection).
 - **Lexicon conventions** — an owned `*.<app>.*` namespace, TID rkeys, records
   that mirror mainline for portability, no PII.
-- **Client-side sealed-box encryption** (ECDH → HKDF → AES-GCM) for
-  privacy-in-public, with the reject-private-key-in-config guard.

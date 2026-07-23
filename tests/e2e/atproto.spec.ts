@@ -30,6 +30,15 @@ test('atproto demo resolves a handle and shows DID/PDS/profile', async ({ page }
   await expect(result).toContainText('Demo Account');
 });
 
+test('sealed-box demo seals a message and opens it (real WebCrypto)', async ({ page }) => {
+  await page.goto('/atproto.html');
+  await page.locator('[data-testid="seal-input"]').fill('the eagle lands at dawn');
+  await page.locator('[data-testid="seal-button"]').click();
+  const result = page.locator('[data-testid="seal-result"]');
+  await expect(result).toContainText('ciphertext');
+  await expect(page.locator('[data-testid="seal-recovered"]')).toContainText('the eagle lands at dawn');
+});
+
 test('atproto demo shows a friendly error when resolution fails', async ({ page }) => {
   await page.route('**/xrpc/com.atproto.identity.resolveHandle*', (route) =>
     route.fulfill({ status: 400, json: {} }),

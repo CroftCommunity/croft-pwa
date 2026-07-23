@@ -7,6 +7,7 @@ import { registerServiceWorker } from '../sw-register';
 import { log } from '../log';
 import { measure } from '../measure/measure';
 import { resolveIdentity, getProfile, AtprotoReadError } from '../atproto/read';
+import { generateKeypair, seal, open } from '../crypto/sealedbox';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -34,11 +35,65 @@ function intro(): HTMLElement {
     el(
       'p',
       'guide-note',
-      'Read-only and unauthenticated. Sign-in (OAuth with PKCE + PAR + DPoP), ' +
-        'writes to your own repo, and client-side sealed-box encryption are the ' +
-        'next phase; until then skylite is the reference implementation for them.',
+      'Read-only and unauthenticated. Sign-in (OAuth with PKCE + PAR + DPoP) and ' +
+        'writes to your own repo are the next phase (skylite is the reference); ' +
+        'client-side sealed-box encryption is demonstrated below.',
     ),
   );
+  return panel;
+}
+
+function sealedDemo(): HTMLElement {
+  const panel = el('section', 'panel');
+  panel.append(
+    el('h2', undefined, 'Sealed box — privacy in public'),
+    el(
+      'p',
+      undefined,
+      'A record can live in a public repo yet stay private: seal it to a public ' +
+        'key and only the matching private key opens it. Ephemeral ECDH(P-256) → ' +
+        'HKDF → AES-GCM, all in the browser. Below: seal a message to a fresh ' +
+        "keypair's public half, then open it with the private half.",
+    ),
+  );
+
+  const input = el('input');
+  input.type = 'text';
+  input.value = 'meet me at the old croft';
+  input.setAttribute('aria-label', 'message to seal');
+  input.setAttribute('data-testid', 'seal-input');
+
+  const btn = el('button', 'btn btn-primary', 'Seal & open');
+  btn.setAttribute('data-testid', 'seal-button');
+
+  const out = el('div', 'atproto-result');
+  out.setAttribute('data-testid', 'seal-result');
+
+  btn.addEventListener('click', () => {
+    const msg = input.value;
+    out.replaceChildren(el('p', 'mono', 'Sealing…'));
+    void (async () => {
+      try {
+        const { publicKeyJwk, privateKeyJwk } = await generateKeypair();
+        const box = await seal(msg, publicKeyJwk);
+        const recovered = await open(box, privateKeyJwk);
+        const ctP = el('p');
+        ctP.append(el('strong', undefined, 'ciphertext '), el('span', 'mono', `${box.ct.slice(0, 44)}…`));
+        const recP = el('p');
+        recP.setAttribute('data-testid', 'seal-recovered');
+        recP.append(el('strong', undefined, 'opened '), el('span', 'mono', recovered));
+        out.replaceChildren(ctP, recP);
+        log.info('sealed-box round-trip ok');
+      } catch (err) {
+        out.replaceChildren(el('p', 'mono', 'Sealed-box demo failed (WebCrypto unavailable?)'));
+        log.warn('sealed-box demo failed', err);
+      }
+    })();
+  });
+
+  const controls = el('div', 'atproto-controls');
+  controls.append(input, btn);
+  panel.append(controls, out);
   return panel;
 }
 
@@ -98,7 +153,7 @@ function demo(): HTMLElement {
 
 function content(): HTMLElement {
   const wrap = el('div');
-  wrap.append(intro(), demo());
+  wrap.append(intro(), demo(), sealedDemo());
   return wrap;
 }
 
