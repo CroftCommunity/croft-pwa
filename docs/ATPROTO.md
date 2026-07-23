@@ -60,13 +60,55 @@ The key-at-rest **vault** (WebAuthn-PRF / passphrase wrap that protects the
 private key) is the layer that pairs with real encrypted writes — staged with the
 write path below.
 
+## OAuth sign-in (shipped)
+
+`src/atproto/oauth/{jose,pkce,dpop,resolve,client}.ts` (ported from skylite): a
+public (SPA) client — authorization-code + PKCE + a pushed authorization request
+(PAR), with DPoP-bound tokens (RFC 9449). No client secret; `client_id` is the
+hosted `client-metadata.json` URL (repo root, served at the site root, copied
+verbatim by `build.mjs`); `redirect_uri` is derived from the live origin
+(`location.origin + location.pathname`) so the same code round-trips correctly
+on GitHub Pages, a PR preview subpath, or the local dev/test server.
+
+```
+handle ──resolveIdentity (handle→DID→PDS→authserver metadata)──▶ AuthServerMeta
+   │
+   ▼ beginAuthorization: PKCE + a fresh DPoP key + PAR ──▶ authorizeUrl
+   │  (pending auth — verifier, DPoP key, state — kept in sessionStorage;
+   │   it must survive the full-page redirect to the PDS and back)
+   ▼ browser navigates to authorizeUrl, user consents on their own PDS
+   ▼ PDS redirects back to redirect_uri with ?code&state
+   ▼ completeAuthorization: exchanges the code for DPoP-bound tokens,
+     verifies the returned `sub` matches the resolved DID ──▶ OAuthSession
+```
+
+- `refresh` / `ensureFresh` rotate the (single-use) refresh token and keep the
+  access token comfortably valid, so re-auth stays rare.
+- The DPoP-nonce handshake (a server demanding a fresh `nonce` on the first try)
+  is handled with a single retry, on both PAR and token requests.
+- The session is kept in memory / `sessionStorage` only for this increment — not
+  `localStorage` — because a persistent session needs the key-at-rest **vault**
+  (below) to protect the DPoP private key; that pairing lands with DPoP writes.
+- The `/atproto.html` page demonstrates sign-in live, right below the read-path
+  demo: enter a handle, sign in on your own PDS, land back signed in as your DID.
+- **Testing**: `tests/unit/oauth-crypto.test.ts` (jose/PKCE/DPoP — RFC 7636 test
+  vector, RFC 7638 thumbprint, a verifiable DPoP proof), `tests/unit/oauth-resolve.test.ts`
+  (the discovery chain), `tests/unit/oauth-client.test.ts` (begin/complete/refresh,
+  state-mismatch and `sub`-mismatch rejection). Hermetic e2e in
+  `tests/e2e/atproto.spec.ts` mocks the whole discovery→PAR→authorize→token chain
+  on CSP-allowlisted hosts (`bsky.social` + `*.host.bsky.network`), so the real
+  begin→redirect→callback→token-exchange path runs unmodified through the page's
+  own code — only the live consent screen and server-side DPoP validation are out
+  of scope there. The live authorize→consent→callback round-trip against a real
+  PDS is a verify-in-run item, not runnable in this sandbox (device consent, not
+  just network egress).
+
 ## Deliberately staged (the rest of the auth phase)
 
 Not yet in croft-pwa; **skylite is the reference** until they land:
 
-- **OAuth** for a public SPA client — PKCE + PAR + DPoP, a hosted
-  `client-metadata.json`, rotating refresh, `sub`-verification.
-- **DPoP-authenticated writes** to the user's own repo (`putRecord`/`createRecord`),
-  and the sealed-box **vault** (key-at-rest protection).
+- **DPoP-authenticated writes** to the user's own repo (`putRecord`/`createRecord`/
+  `deleteRecord`), and the sealed-box **vault** (key-at-rest protection) that makes
+  a persistent (not just in-tab) session safe.
 - **Lexicon conventions** — an owned `*.<app>.*` namespace, TID rkeys, records
   that mirror mainline for portability, no PII.
