@@ -87,6 +87,13 @@ export const META = {
     disclosure: 'That the metrics screen was opened',
     info: 'route',
   },
+  page_atproto: {
+    type: 'page',
+    description: 'Opened the atproto/PDA page',
+    expires: '2027-12-31',
+    disclosure: 'That the atproto (PDA) page was opened',
+    info: 'route',
+  },
   feature_theme_toggle: {
     type: 'feature',
     description: 'Switched the light/dark theme',

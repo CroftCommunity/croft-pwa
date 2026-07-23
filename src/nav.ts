@@ -24,7 +24,7 @@ const TABS: readonly Tab[] = [
   {
     href: 'reference.html',
     label: 'Standards',
-    active: ['reference.html', 'chassis.html', 'brand.html', 'pwa.html', 'agent-method.html'],
+    active: ['reference.html', 'chassis.html', 'brand.html', 'pwa.html', 'agent-method.html', 'atproto.html'],
   },
   { href: 'metrics.html', label: 'Metrics', active: ['metrics.html'] },
   { href: 'settings.html', label: 'Settings', active: ['settings.html'] },

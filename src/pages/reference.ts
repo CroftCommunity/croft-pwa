@@ -43,6 +43,11 @@ const CHAPTERS: readonly Chapter[] = [
     title: 'Agent method',
     blurb: 'Test first, plans that record the why, run summaries that carry the evidence.',
   },
+  {
+    href: 'atproto.html',
+    title: 'atproto / PDA',
+    blurb: 'Read the records, not the pages: resolve a handle to a DID to a PDS, live. (Read path; auth is next.)',
+  },
 ];
 
 function content(): HTMLElement {

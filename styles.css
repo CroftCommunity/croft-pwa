@@ -228,6 +228,28 @@ main {
   color: var(--ink-muted);
 }
 
+/* --- atproto / PDA demo --- */
+.atproto-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+}
+.atproto-controls input {
+  flex: 1 1 12rem;
+  min-height: 44px;
+  padding: var(--s-2) var(--s-3);
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--r-m);
+}
+.atproto-result p {
+  margin: 0 0 var(--s-2);
+  overflow-wrap: anywhere;
+}
+
 /* --- Measure / metrics list --- */
 .measure-list {
   list-style: none;

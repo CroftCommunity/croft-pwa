@@ -79,6 +79,7 @@ const PAGES = [
     sriToken: '%AGENT_METHOD_JS_SRI%',
   },
   { html: 'metrics.html', entry: 'src/pages/metrics.ts', jsToken: '%METRICS_JS%', sriToken: '%METRICS_JS_SRI%' },
+  { html: 'atproto.html', entry: 'src/pages/atproto.ts', jsToken: '%ATPROTO_JS%', sriToken: '%ATPROTO_JS_SRI%' },
 ];
 
 rmSync(dist, { recursive: true, force: true });
@@ -175,7 +176,10 @@ const csp = [
   "font-src 'self'",
   "style-src 'self'",
   "manifest-src 'self'",
-  "connect-src 'self'",
+  // atproto read path: the public AppView + the PLC directory + bsky PDS hosts.
+  // Arbitrary non-bsky PDS hosts can't be statically allowlisted (documented in
+  // docs/ATPROTO.md); the demo reads via the AppView, which covers them.
+  "connect-src 'self' https://public.api.bsky.app https://plc.directory https://bsky.social https://*.host.bsky.network",
   "worker-src 'self'",
   `script-src 'self' 'sha256-${sha256base64(THEME_INIT_JS)}'`,
 ].join('; ');
