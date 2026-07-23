@@ -1,0 +1,19 @@
+{
+  "lexicon": 1,
+  "id": "ing.croft.croftpwa.note",
+  "description": "A demo note record written by croft-pwa to the user's own repo, to exercise the DPoP write path. Owned namespace ing.croft.<app>.*; the record key is a TID (never derived from content), and the shape mirrors a mainline post (text + createdAt) so it stays portable. No PII in the key.",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["text", "createdAt"],
+        "properties": {
+          "text": { "type": "string", "maxLength": 3000, "maxGraphemes": 300 },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

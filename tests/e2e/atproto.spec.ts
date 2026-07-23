@@ -105,6 +105,14 @@ test.describe('OAuth sign-in (PKCE + PAR + DPoP)', () => {
     await expect(page.locator('[data-testid="signin-did"]')).toContainText(DID);
     // The callback params are stripped so a refresh doesn't replay the exchange.
     await expect(page).toHaveURL(/atproto\.html$/);
+
+    // ...and, signed in, write a DPoP record to the (mocked) repo.
+    await page.route(`${PDS}/xrpc/com.atproto.repo.createRecord`, (route) =>
+      route.fulfill({ json: { uri: `at://${DID}/ing.croft.croftpwa.note/rkey123`, cid: 'bafy' } }),
+    );
+    await page.locator('[data-testid="write-input"]').fill('e2e note');
+    await page.locator('[data-testid="write-button"]').click();
+    await expect(page.locator('[data-testid="write-uri"]')).toContainText('ing.croft.croftpwa.note/rkey123');
   });
 
   test('a normal load is not treated as a callback', async ({ page }) => {
@@ -112,4 +120,16 @@ test.describe('OAuth sign-in (PKCE + PAR + DPoP)', () => {
     await expect(page.locator('[data-testid="signin-button"]')).toBeVisible();
     await expect(page.locator('[data-testid="signin-did"]')).toHaveCount(0);
   });
+
+  test('the write demo asks you to sign in first', async ({ page }) => {
+    await page.goto('/atproto.html');
+    await page.locator('[data-testid="write-button"]').click();
+    await expect(page.locator('[data-testid="write-result"]')).toContainText('Sign in above first');
+  });
+});
+
+test('vault demo wraps a key behind a passphrase and unlocks it (real WebCrypto)', async ({ page }) => {
+  await page.goto('/atproto.html');
+  await page.locator('[data-testid="vault-button"]').click();
+  await expect(page.locator('[data-testid="vault-status"]')).toContainText('unlocked', { timeout: 15_000 });
 });

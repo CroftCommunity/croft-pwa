@@ -16,9 +16,9 @@ import { randomB64url } from './jose';
  * hosted client-metadata.json URL. The DPoP-nonce handshake (servers demand a
  * fresh `nonce` on the first try) is handled with a single retry.
  *
- * Ported from skylite's proven src/atproto/oauth/client.ts, scoped to sign-in
- * only: DPoP-authenticated writes (putRecord/createRecord/deleteRecord) are a
- * separate, later increment (docs/ATPROTO.md).
+ * Ported from skylite's proven src/atproto/oauth/client.ts. Sign-in landed in
+ * increment 2; DPoP-authenticated writes (putRecord/createRecord/deleteRecord,
+ * below) landed in increment 3.
  *
  * The live authorize→consent→callback round-trip against a real PDS is a
  * verify-in-run item; the pure builders and the token/PAR requests here are
@@ -251,4 +251,133 @@ export async function ensureFresh(
 ): Promise<OAuthSession> {
   if (session.expiresAt !== undefined && session.expiresAt - Date.now() > skewMs) return session;
   return refresh(session, fetchImpl);
+}
+
+// --- DPoP-authenticated writes to the user's own repo (increment 3) ---------
+
+/**
+ * A DPoP-authenticated JSON POST to the session's PDS, with the single
+ * use_dpop_nonce retry. The proof carries the access-token hash (ath) and is
+ * bound to the session's DPoP key, so a stolen bearer token is useless without
+ * the key. Ported from skylite's pdsRequest.
+ */
+async function pdsJson(
+  session: OAuthSession,
+  path: string,
+  body: unknown,
+  fetchImpl: typeof fetch,
+): Promise<{ data: XrpcJson; nonce: string | undefined; status: number }> {
+  const key = await importDpopKey(session.dpopKey);
+  const url = new URL(path, session.pds).toString();
+  const attempt = async (nonce: string | undefined): Promise<Response> => {
+    const proof = await createDpopProof({
+      key,
+      htm: 'POST',
+      htu: url,
+      accessToken: session.accessToken,
+      ...(nonce ? { nonce } : {}),
+    });
+    return fetchImpl(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json',
+        authorization: `DPoP ${session.accessToken}`,
+        dpop: proof,
+      },
+      body: JSON.stringify(body),
+    });
+  };
+  let res = await attempt(session.dpopNonce);
+  let serverNonce = res.headers.get('DPoP-Nonce') ?? session.dpopNonce;
+  let data = (await res.json().catch(() => ({}))) as XrpcJson;
+  if (!res.ok && data.error === 'use_dpop_nonce' && serverNonce) {
+    res = await attempt(serverNonce);
+    serverNonce = res.headers.get('DPoP-Nonce') ?? serverNonce;
+    data = (await res.json().catch(() => ({}))) as XrpcJson;
+  }
+  return { data, nonce: serverNonce, status: res.status };
+}
+
+function withNonce(session: OAuthSession, nonce: string | undefined): OAuthSession {
+  return nonce ? { ...session, dpopNonce: nonce } : session;
+}
+
+export interface WriteResult {
+  /** The session, carrying any refreshed DPoP nonce (thread it into the next write). */
+  readonly session: OAuthSession;
+  readonly uri?: string;
+  readonly cid?: string;
+}
+
+const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
+
+/** Put a record at a known rkey in the user's own repo. */
+export async function putRecord(
+  session: OAuthSession,
+  params: { collection: string; rkey: string; record: unknown },
+  fetchImpl: typeof fetch = globalThis.fetch.bind(globalThis),
+): Promise<WriteResult> {
+  const { data, nonce, status } = await pdsJson(
+    session,
+    '/xrpc/com.atproto.repo.putRecord',
+    {
+      repo: session.did,
+      collection: params.collection,
+      rkey: params.rkey,
+      record: params.record,
+      validate: false,
+    },
+    fetchImpl,
+  );
+  if (status < 200 || status >= 300) {
+    throw new Error(`putRecord failed (${status})${data.error ? `: ${data.error}` : ''}`);
+  }
+  const uri = str(data.uri);
+  const cid = str(data.cid);
+  return { session: withNonce(session, nonce), ...(uri ? { uri } : {}), ...(cid ? { cid } : {}) };
+}
+
+/** Create a record (server-assigned rkey unless one is given) in the user's own repo. */
+export async function createRecord(
+  session: OAuthSession,
+  params: { collection: string; record: unknown; rkey?: string },
+  fetchImpl: typeof fetch = globalThis.fetch.bind(globalThis),
+): Promise<WriteResult> {
+  const { data, nonce, status } = await pdsJson(
+    session,
+    '/xrpc/com.atproto.repo.createRecord',
+    {
+      repo: session.did,
+      collection: params.collection,
+      record: params.record,
+      validate: false,
+      ...(params.rkey ? { rkey: params.rkey } : {}),
+    },
+    fetchImpl,
+  );
+  if (status < 200 || status >= 300) {
+    throw new Error(`createRecord failed (${status})${data.error ? `: ${data.error}` : ''}`);
+  }
+  const uri = str(data.uri);
+  const cid = str(data.cid);
+  return { session: withNonce(session, nonce), ...(uri ? { uri } : {}), ...(cid ? { cid } : {}) };
+}
+
+/** Delete a record by rkey from the user's own repo. */
+export async function deleteRecord(
+  session: OAuthSession,
+  params: { collection: string; rkey: string },
+  fetchImpl: typeof fetch = globalThis.fetch.bind(globalThis),
+): Promise<OAuthSession> {
+  const { data, nonce, status } = await pdsJson(
+    session,
+    '/xrpc/com.atproto.repo.deleteRecord',
+    { repo: session.did, collection: params.collection, rkey: params.rkey },
+    fetchImpl,
+  );
+  if (status < 200 || status >= 300) {
+    throw new Error(`deleteRecord failed (${status})${data.error ? `: ${data.error}` : ''}`);
+  }
+  return withNonce(session, nonce);
 }

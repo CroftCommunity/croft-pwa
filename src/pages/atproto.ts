@@ -8,7 +8,22 @@ import { log } from '../log';
 import { measure } from '../measure/measure';
 import { resolveIdentity, getProfile, AtprotoReadError } from '../atproto/read';
 import { generateKeypair, seal, open } from '../crypto/sealedbox';
-import { beginAuthorization, completeAuthorization, type OAuthSession, type PendingAuth } from '../atproto/oauth/client';
+import {
+  beginAuthorization,
+  completeAuthorization,
+  createRecord,
+  deleteRecord,
+  type OAuthSession,
+  type PendingAuth,
+} from '../atproto/oauth/client';
+import { wrapKey, unwrapKey } from '../crypto/vault';
+
+// The demo note lexicon (owned namespace, TID rkey, no PII — see docs/ATPROTO.md).
+const NOTE_COLLECTION = 'ing.croft.croftpwa.note';
+
+// Set once sign-in completes, so the write demo can act as the signed-in user.
+// In memory only — a persisted session needs the vault (demonstrated below).
+let currentSession: OAuthSession | null = null;
 
 // OAuth sign-in (PKCE + PAR + DPoP). client_id is the hosted client-metadata.json
 // (must match its redirect_uris); redirect_uri is derived from the live origin so
@@ -94,6 +109,7 @@ function signInSection(): SignInUi {
   out.setAttribute('data-testid', 'signin-result');
 
   const showSession = (session: OAuthSession): void => {
+    currentSession = session;
     const p = el('p');
     p.setAttribute('data-testid', 'signin-did');
     p.append(el('strong', undefined, 'Signed in as '), el('span', 'mono', session.did));
@@ -265,10 +281,136 @@ function demo(): HTMLElement {
   return panel;
 }
 
+function writeDemo(): HTMLElement {
+  const panel = el('section', 'panel');
+  panel.append(
+    el('h2', undefined, 'Write to your own repo'),
+    el(
+      'p',
+      undefined,
+      `Once signed in above, write a demo note (${NOTE_COLLECTION}) to your repo ` +
+        'over DPoP, then delete it. The record key is a random TID — nothing here ' +
+        'is derived from content.',
+    ),
+  );
+  const input = el('input');
+  input.type = 'text';
+  input.value = 'hello from croft-pwa';
+  input.setAttribute('aria-label', 'note text to write');
+  input.setAttribute('data-testid', 'write-input');
+  const btn = el('button', 'btn btn-primary', 'Write note');
+  btn.setAttribute('data-testid', 'write-button');
+  const out = el('div', 'atproto-result');
+  out.setAttribute('data-testid', 'write-result');
+
+  const rkeyOf = (uri: string): string => uri.split('/').pop() ?? '';
+
+  btn.addEventListener('click', () => {
+    const session = currentSession;
+    if (!session) {
+      out.replaceChildren(el('p', 'mono', 'Sign in above first.'));
+      return;
+    }
+    out.replaceChildren(el('p', 'mono', 'Writing…'));
+    void (async () => {
+      try {
+        const res = await createRecord(session, {
+          collection: NOTE_COLLECTION,
+          record: { text: input.value, createdAt: new Date().toISOString() },
+        });
+        currentSession = res.session;
+        const uri = res.uri ?? '(no uri returned)';
+        const wrote = el('p');
+        wrote.setAttribute('data-testid', 'write-uri');
+        wrote.append(el('strong', undefined, 'wrote '), el('span', 'mono', uri));
+        const del = el('button', 'btn btn-secondary', 'Delete it');
+        del.setAttribute('data-testid', 'write-delete');
+        del.addEventListener('click', () => {
+          const sess = currentSession;
+          if (!sess) return;
+          void (async () => {
+            try {
+              currentSession = await deleteRecord(sess, { collection: NOTE_COLLECTION, rkey: rkeyOf(uri) });
+              out.replaceChildren(el('p', 'mono', 'Deleted.'));
+            } catch (err) {
+              out.replaceChildren(el('p', 'mono', `Delete failed: ${err instanceof Error ? err.message : 'unknown'}`));
+            }
+          })();
+        });
+        out.replaceChildren(wrote, del);
+        log.info('atproto write ok', uri);
+      } catch (err) {
+        out.replaceChildren(el('p', 'mono', `Write failed: ${err instanceof Error ? err.message : 'unknown'}`));
+        log.warn('atproto write failed', err);
+      }
+    })();
+  });
+  const controls = el('div', 'atproto-controls');
+  controls.append(input, btn);
+  panel.append(controls, out);
+  return panel;
+}
+
+function vaultDemo(): HTMLElement {
+  const panel = el('section', 'panel');
+  panel.append(
+    el('h2', undefined, 'Vault — a key safe at rest'),
+    el(
+      'p',
+      undefined,
+      'A private key (a sealed-box key, or a persisted session key) must never sit ' +
+        'in storage in the clear. The vault wraps it behind a passphrase (PBKDF2 → ' +
+        'AES-GCM); the wrong passphrase cannot unwrap it. Below: generate a key, ' +
+        'wrap it, and unlock it again.',
+    ),
+  );
+  const input = el('input');
+  input.type = 'text';
+  input.value = 'correct horse battery staple';
+  input.setAttribute('aria-label', 'vault passphrase');
+  input.setAttribute('data-testid', 'vault-input');
+  const btn = el('button', 'btn btn-primary', 'Wrap & unlock');
+  btn.setAttribute('data-testid', 'vault-button');
+  const out = el('div', 'atproto-result');
+  out.setAttribute('data-testid', 'vault-result');
+
+  btn.addEventListener('click', () => {
+    const pass = input.value;
+    out.replaceChildren(el('p', 'mono', 'Wrapping…'));
+    void (async () => {
+      try {
+        const { privateKeyJwk } = await generateKeypair();
+        const wrapped = await wrapKey(privateKeyJwk, pass);
+        const back = await unwrapKey(wrapped, pass);
+        const ok = JSON.stringify(back) === JSON.stringify(privateKeyJwk);
+        // Prove the wrong passphrase cannot open it.
+        let wrongRejected = false;
+        try {
+          await unwrapKey(wrapped, `${pass}-wrong`);
+        } catch {
+          wrongRejected = true;
+        }
+        const line = el('p', 'mono');
+        line.setAttribute('data-testid', 'vault-status');
+        line.textContent = ok && wrongRejected ? 'unlocked with the passphrase; the wrong one is rejected.' : 'vault check failed';
+        out.replaceChildren(line);
+        log.info('vault demo ok');
+      } catch (err) {
+        out.replaceChildren(el('p', 'mono', 'Vault demo failed (WebCrypto unavailable?)'));
+        log.warn('vault demo failed', err);
+      }
+    })();
+  });
+  const controls = el('div', 'atproto-controls');
+  controls.append(input, btn);
+  panel.append(controls, out);
+  return panel;
+}
+
 function content(): { node: HTMLElement; signin: SignInUi } {
   const wrap = el('div');
   const signin = signInSection();
-  wrap.append(intro(), demo(), signin.panel, sealedDemo());
+  wrap.append(intro(), demo(), signin.panel, writeDemo(), sealedDemo(), vaultDemo());
   return { node: wrap, signin };
 }
 

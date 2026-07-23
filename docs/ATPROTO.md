@@ -103,12 +103,41 @@ handle ──resolveIdentity (handle→DID→PDS→authserver metadata)──▶
   PDS is a verify-in-run item, not runnable in this sandbox (device consent, not
   just network egress).
 
-## Deliberately staged (the rest of the auth phase)
+## DPoP writes (shipped)
 
-Not yet in croft-pwa; **skylite is the reference** until they land:
+`src/atproto/oauth/client.ts` gains `putRecord` / `createRecord` / `deleteRecord`:
+a DPoP-authenticated JSON POST to the session's PDS. The proof carries the
+access-token hash (`ath`) and is bound to the session's DPoP key, so a stolen
+bearer token is useless without the key; the single `use_dpop_nonce` retry is
+handled. Record keys are TIDs (`src/atproto/tid.ts`) — random and sortable, never
+derived from content. Unit-tested with a real DPoP key against a recording fetch
+(request shape, DPoP + authorization headers, nonce retry, error). The
+`/atproto.html` write demo creates a note in your repo and deletes it — exercised
+hermetically end-to-end after a mocked sign-in; a real write needs a live session.
 
-- **DPoP-authenticated writes** to the user's own repo (`putRecord`/`createRecord`/
-  `deleteRecord`), and the sealed-box **vault** (key-at-rest protection) that makes
-  a persistent (not just in-tab) session safe.
-- **Lexicon conventions** — an owned `*.<app>.*` namespace, TID rkeys, records
-  that mirror mainline for portability, no PII.
+## Vault — a key safe at rest (shipped, passphrase path)
+
+`src/crypto/vault.ts`: `wrapKey(privateKeyJwk, passphrase)` / `unwrapKey(...)`.
+PBKDF2-SHA256 (600k iterations) → HKDF → AES-256-GCM wraps a private-key JWK; the
+wrong passphrase fails the auth tag and `unwrapKey` throws. This is what makes a
+**persistent** session (or a stored sealed-box key) safe to keep at rest. The
+stronger **WebAuthn-PRF** path (a passkey/biometric derives the wrapping secret —
+nothing to remember or phish) is device-dependent and not hermetically testable,
+so it is staged. Unit-tested (round-trip, no-plaintext-in-blob, wrong-passphrase);
+demonstrated live on `/atproto.html`.
+
+## Lexicon conventions (shipped)
+
+- **Owned namespace** `ing.croft.<app>.*` (croft-pwa's demo record is
+  `ing.croft.croftpwa.note`, in `lexicons/`).
+- **TID record keys** — random + sortable, never derived from user content (no PII
+  in the key).
+- **Mirror mainline** where possible (the note is `text` + `createdAt`, like a
+  post) so records stay portable to other clients.
+
+## Deliberately staged (skylite is the reference)
+
+- The **WebAuthn-PRF vault path** (passkey/biometric key-at-rest) and a
+  **persisted, vault-wrapped session** across reloads.
+- Client-side **sealed-box records** written to a PDS (compose the sealed box +
+  a write + the vault) — the full "privacy in public" archive pattern.
