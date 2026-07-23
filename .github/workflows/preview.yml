@@ -53,7 +53,7 @@ jobs:
       # fork PR carries a read-only token that can't push gh-pages or comment).
       - name: Resolve PR context
         id: resolve
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             let prNumber, headSha, headRef, headRepo, closed;
@@ -95,11 +95,11 @@ jobs:
       # branch is enough (we only need the deploy script).
       - name: Check out
         if: steps.resolve.outputs.skip == 'false'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.resolve.outputs.closed == 'true' && 'main' || steps.resolve.outputs.sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.resolve.outputs.skip == 'false' && steps.resolve.outputs.closed == 'false'
         with:
           node-version: 22
@@ -131,7 +131,7 @@ jobs:
       # Sticky comment: one comment per PR, updated in place.
       - name: Comment preview status
         if: steps.resolve.outputs.skip == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           PR: ${{ steps.resolve.outputs.pr }}
           SHA: ${{ steps.resolve.outputs.sha }}
