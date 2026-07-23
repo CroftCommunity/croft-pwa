@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; img-src 'self' data:; font-src 'self'; style-src 'self'; manifest-src 'self'; connect-src 'self'; worker-src 'self'; script-src 'self' 'sha256-/SMapJxJi1eGjXM9ZnSWlFNcbyiDy3McaSdqS3/hkhM='" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; img-src 'self' data:; font-src 'self'; style-src 'self'; manifest-src 'self'; connect-src 'self' https://public.api.bsky.app https://plc.directory https://bsky.social https://*.host.bsky.network; worker-src 'self'; script-src 'self' 'sha256-/SMapJxJi1eGjXM9ZnSWlFNcbyiDy3McaSdqS3/hkhM='" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#ab5330" />
     <meta name="description" content="Chassis — the frame every Croft PWA is built on." />
@@ -10,10 +10,10 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
     <script>(function(){try{var t=localStorage.getItem('croft-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-    <link rel="stylesheet" href="styles.css?v=v0%200.1.0%2B3e59486" integrity="sha384-EUfKBEl3pI5MfFg8WANnjT5cTouKTYE+0lEboAPuABfX7O/tvooG7LkcuZ6ClORg" crossorigin="anonymous" />
+    <link rel="stylesheet" href="styles.css?v=v0%200.1.0%2Bd3f7944" integrity="sha384-NrmG1pft0F1Y0Pwz4m2NY2uxAyY3NU9KbzuTeVTCNny4MMWsaLycu0p2B/9JVOkC" crossorigin="anonymous" />
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="assets/chassis-ZXH4MCWB.js" integrity="sha384-S1TnmlMDIH96oIhcTyAZ2MCa4YXWwa8R8vzo/MUCm3UEnktIcI+BJD4AXPNVWtim" crossorigin="anonymous"></script>
+    <script type="module" src="assets/chassis-7GDWSVMM.js" integrity="sha384-7sg2HKY2AHAjzOahrSNJGWAAJkjY4uzRvhm87gFuU78O2yBIusfhopjzzrwJv/L7" crossorigin="anonymous"></script>
   </body>
 </html>
