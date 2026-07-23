@@ -46,3 +46,5 @@ gh workflow run preview.yml -f pr=<N> -f teardown=true
 
 Confirm by polling the URL until it serves, and remove the preview when the PR
 merges or closes if the automatic teardown did not fire.
+
+<!-- preview smoke test: verifying the PR-preview standard end-to-end -->
