@@ -1,0 +1,28 @@
+{
+  "name": "croft-pwa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A meta-site on building Croft SPA/PWAs: the standards and their reference implementation in one repo, built to the standards it documents.",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "unit": "vitest run",
+    "build": "node build.mjs",
+    "e2e": "playwright test",
+    "e2e:live": "playwright test --config playwright.live.config.ts",
+    "serve": "node tools/serve.mjs dist 4173",
+    "test": "npm run lint && npm run typecheck && npm run unit && npm run build && npm run e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.5",
+    "esbuild": "^0.24.2",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.19.1",
+    "vitest": "^2.1.8"
+  }
+}

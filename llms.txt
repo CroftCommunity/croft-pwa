@@ -1,0 +1,21 @@
+# croft-pwa
+
+> A meta-site about building Croft SPA/PWAs: the standards and a reference
+> implementation in one repo, itself a Croft PWA built to the standards it
+> documents.
+
+## Start here
+
+- [Agent guide](/AGENTS.md): the front door for building a Croft PWA.
+- [Operating manual](/CLAUDE.md): conventions and the gate for working in this repo.
+
+## Standards
+
+- [Design & brand](/docs/DESIGN.md): tokens, palette, WCAG, navigation law.
+- [Security](/docs/SECURITY.md): build-time CSP, Subresource Integrity, threat posture.
+- [Practices](/docs/PRACTICES.md): the gate, service worker, TDD, plans & RUN summaries.
+
+## Reference implementations
+
+- arecipe — https://arecipe.app/ (TDD method, brand-token discipline)
+- skylite — https://github.com/CroftCommunity/skylite (atproto/PDA stack)
