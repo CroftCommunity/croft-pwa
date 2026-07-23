@@ -4,6 +4,10 @@
 import { VERSION } from './version';
 import { currentTheme, toggleTheme } from './theme';
 import { measure } from './measure/measure';
+import { mountUpdateToast } from './update-toast';
+
+/** Where the Croft mark points. Placeholder pending the brand-name resolution. */
+const CROFT_HOME = 'https://croft.ing';
 
 interface Tab {
   /** Relative href (works at a domain root or a project subpath). */
@@ -77,17 +81,26 @@ function renderTabs(page: string): HTMLElement {
   return nav;
 }
 
-function renderBuildStamp(): HTMLElement {
+// Footer: the build stamp (left) and a small Croft attribution (right, so it
+// reads as bottom-right of the page). Kept in the content footer rather than a
+// fixed badge so it never collides with the sticky mobile tab bar.
+function renderFooter(): HTMLElement {
   const footer = el('footer', 'build-stamp');
   const stamp = el('span', 'mono', VERSION);
   stamp.setAttribute('data-version-stamp', '');
-  footer.append(stamp);
+  const croft = el('a', 'croft-attr', 'Croft');
+  croft.href = CROFT_HOME;
+  croft.setAttribute('data-croft-attribution', '');
+  croft.setAttribute('aria-label', 'A Croft project');
+  footer.append(stamp, croft);
   return footer;
 }
 
-/** Render the full shell (topbar + tabs + main content + build stamp) into #app. */
+/** Render the full shell (topbar + tabs + main content + footer) into #app. */
 export function mountShell(app: HTMLElement, content: HTMLElement): void {
   const main = el('main');
   main.append(content);
-  app.append(renderTopbar(), renderTabs(currentPage()), main, renderBuildStamp());
+  app.append(renderTopbar(), renderTabs(currentPage()), main, renderFooter());
+  // "Ask, don't ambush": surface a waiting worker as a transient toast.
+  mountUpdateToast();
 }

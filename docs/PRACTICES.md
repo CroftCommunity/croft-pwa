@@ -56,6 +56,40 @@ Precache is per-asset tolerant (one miss must not brick install). `skipWaiting`
 + `clients.claim` so a fix is not stranded; registration failure is swallowed
 (progressive enhancement).
 
+## Service-worker updates ("ask, don't ambush")
+
+When you ship a new build the browser installs the new worker but parks it in a
+**waiting** state until the pages the old worker controls go away — the update is
+automatic but lazy, never mid-session. There are three stances for *when* the new
+worker takes over; a Croft PWA picks one deliberately:
+
+- **Ask (the default).** The waiting worker is surfaced — a transient update toast
+  and the **Settings → Update** button — and only takes over when the user asks
+  (`applyUpdate()` posts `SKIP_WAITING`; the page reloads on `controllerchange`).
+  No swap under a live session; the reload is a clean boundary with matched
+  JS + chunks. This is the default because content still updates on reload anyway
+  (navigations are network-first), so the only thing gated is the *worker code*.
+- **Ambush** (`skipWaiting()` in the SW's install). The new worker activates
+  immediately, into open tabs. Choose this only when a patch **must** land
+  unconditionally (e.g. a safety/moderation fix that can't wait for a tab left
+  open for days — skylite's case), and make the app state-resilient so a
+  mid-flight swap can't corrupt in-progress work.
+- **Silent/lazy** (do nothing). The update lands on the next visit after all tabs
+  close. Fine for a throwaway page; a long-lived open tab can sit on old worker
+  code indefinitely.
+
+The default lives in `src/sw.ts` (no `skipWaiting()` in install) + `src/sw-register.ts`
+(waiting-worker detection, `applyUpdate`, `checkForUpdate`) + `src/update-toast.ts`
++ the Settings Update control. To switch an app to ambush, add `skipWaiting()`
+back to the install handler.
+
+## About + attribution
+
+Every page carries a small **Croft attribution** in the footer (bottom-right), and
+the **Settings → About** section names what the app is and links to Croft. The
+attribution wording/target is a placeholder (`croft.ing`) pending the brand-name
+resolution in the discovery corpus.
+
 ## Testing
 
 - **Unit (vitest, node):** pure logic only — the SW routing decision, theme
