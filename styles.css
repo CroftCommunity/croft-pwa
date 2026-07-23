@@ -260,10 +260,52 @@ main {
   color: var(--danger-ink);
 }
 
-/* --- Build stamp footer --- */
+/* --- Footer: build stamp (left) + Croft attribution (right) --- */
 .build-stamp {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
   padding: var(--s-4);
+  border-top: var(--stroke) solid var(--border);
+}
+.croft-attr {
+  font-family: var(--font-display);
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+.croft-attr:hover {
+  color: var(--link);
+}
+
+/* --- Update toast ("ask, don't ambush") --- */
+.update-toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--s-4);
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  max-width: calc(100vw - var(--s-5));
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  color: var(--ink);
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--r-l);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+}
+.update-toast .btn {
+  min-height: 36px;
+  padding: var(--s-1) var(--s-3);
+}
+@media (max-width: 40rem) {
+  /* Sit above the sticky bottom tab bar. */
+  .update-toast {
+    bottom: calc(var(--s-7) + var(--s-3));
+  }
 }
 
 /* --- Empty state: an invitation, never a blank box --- */
