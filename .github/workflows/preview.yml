@@ -1,0 +1,156 @@
+# Per-PR preview deploys. Each open pull request gets a live, throwaway copy of
+# the built site at https://croftcommunity.github.io/croft-pwa/pr-preview/pr-<N>/
+# for review; it is removed automatically when the PR closes.
+#
+# Why this works cleanly here: every asset path is relative, the manifest scope
+# is "./", and the service worker registers against its own directory — so the
+# bundle runs correctly from a /pr-preview/pr-N/ subdirectory with no base-URL
+# rewriting (enforced by the build guard + tests/e2e/subpath.spec.ts).
+#
+# Triggers:
+#   - pull_request (opened/reopened/synchronize/closed) — the normal path.
+#   - workflow_dispatch (input: pr) — the RELIABLE path for a PR opened
+#     programmatically (e.g. Claude Code via the API). GitHub does not start
+#     pull_request-triggered runs for events initiated by a bot/app token, so an
+#     agent-opened PR never fires this on its own; workflow_dispatch is exempt.
+#     NB: a workflow_dispatch trigger is only usable once this file is on main.
+#
+# No third-party actions: the deploy is plain git (scripts/pages-deploy.sh) and
+# the PR comment is actions/github-script (first-party).
+name: preview
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number to (re)deploy a preview for
+        required: true
+        type: string
+      teardown:
+        description: Remove the preview instead of deploying it
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # push the preview into the gh-pages branch
+  pull-requests: write # read the PR (dispatch) + comment the preview URL
+
+# Share the gh-pages group with the production deploy (ci.yml) so writers of that
+# branch serialize instead of racing on `git push`.
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      # Resolve the PR context from EITHER the pull_request event or the
+      # workflow_dispatch input, and enforce the trust gate (same-repo only — a
+      # fork PR carries a read-only token that can't push gh-pages or comment).
+      - name: Resolve PR context
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let prNumber, headSha, headRef, headRepo, closed;
+            if (context.eventName === 'workflow_dispatch') {
+              prNumber = Number(context.payload.inputs.pr);
+              if (!Number.isInteger(prNumber) || prNumber <= 0) {
+                core.setFailed(`invalid "pr" input: ${context.payload.inputs.pr}`);
+                return;
+              }
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner, repo: context.repo.repo, pull_number: prNumber,
+              });
+              headSha = pr.head.sha;
+              headRef = pr.head.ref;
+              headRepo = pr.head.repo ? pr.head.repo.full_name : '';
+              const teardown = String(context.payload.inputs.teardown) === 'true';
+              closed = teardown || pr.state === 'closed';
+            } else {
+              const pr = context.payload.pull_request;
+              prNumber = pr.number;
+              headSha = pr.head.sha;
+              headRef = pr.head.ref;
+              headRepo = pr.head.repo ? pr.head.repo.full_name : '';
+              closed = context.payload.action === 'closed';
+            }
+            const thisRepo = `${context.repo.owner}/${context.repo.repo}`;
+            if (headRepo !== thisRepo) {
+              core.notice(`Skipping preview: head repo "${headRepo}" is not "${thisRepo}" (fork PR).`);
+              core.setOutput('skip', 'true');
+              return;
+            }
+            core.setOutput('skip', 'false');
+            core.setOutput('pr', String(prNumber));
+            core.setOutput('sha', headSha);
+            core.setOutput('ref', headRef);
+            core.setOutput('closed', String(closed));
+
+      # Check out the PR HEAD to build it (deploy); for a teardown the default
+      # branch is enough (we only need the deploy script).
+      - name: Check out
+        if: steps.resolve.outputs.skip == 'false'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.closed == 'true' && 'main' || steps.resolve.outputs.sha }}
+
+      - uses: actions/setup-node@v4
+        if: steps.resolve.outputs.skip == 'false' && steps.resolve.outputs.closed == 'false'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: steps.resolve.outputs.skip == 'false' && steps.resolve.outputs.closed == 'false'
+      - run: npm run build
+        if: steps.resolve.outputs.skip == 'false' && steps.resolve.outputs.closed == 'false'
+      # A stray CNAME under pr-preview/ is ignored by Pages, but drop it so the
+      # preview tree carries nothing that pretends to own a domain. (No-op here —
+      # croft-pwa has no CNAME — kept for parity with the standard.)
+      - run: rm -f dist/CNAME
+        if: steps.resolve.outputs.skip == 'false' && steps.resolve.outputs.closed == 'false'
+
+      # NB: block scalars (>-), not plain — the messages contain '#', and a
+      # space-then-'#' in a YAML plain scalar starts a comment.
+      - name: Deploy preview
+        if: steps.resolve.outputs.skip == 'false' && steps.resolve.outputs.closed == 'false'
+        run: >-
+          bash scripts/pages-deploy.sh "pr-preview/pr-${{ steps.resolve.outputs.pr }}" dist
+          "preview PR #${{ steps.resolve.outputs.pr }} (${{ steps.resolve.outputs.sha }})"
+
+      - name: Remove preview
+        if: steps.resolve.outputs.skip == 'false' && steps.resolve.outputs.closed == 'true'
+        run: >-
+          bash scripts/pages-deploy.sh "pr-preview/pr-${{ steps.resolve.outputs.pr }}" --remove
+          "remove preview PR #${{ steps.resolve.outputs.pr }}"
+
+      # Sticky comment: one comment per PR, updated in place.
+      - name: Comment preview status
+        if: steps.resolve.outputs.skip == 'false'
+        uses: actions/github-script@v7
+        env:
+          PR: ${{ steps.resolve.outputs.pr }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+          CLOSED: ${{ steps.resolve.outputs.closed }}
+        with:
+          script: |
+            const marker = '<!-- pr-preview -->';
+            const closed = process.env.CLOSED === 'true';
+            const sha = (process.env.SHA || '').slice(0, 7);
+            const pr = Number(process.env.PR);
+            const url = `https://croftcommunity.github.io/croft-pwa/pr-preview/pr-${pr}/`;
+            const body = closed
+              ? `${marker}\nPreview for this PR was removed (PR closed).`
+              : `${marker}\n**Live preview:** ${url}\n\nUpdated for \`${sha}\`.`;
+            const { owner, repo } = context.repo;
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number: pr });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number: pr, body });
+            }
