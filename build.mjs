@@ -56,6 +56,12 @@ const PAGES = [
     jsToken: '%SETTINGS_JS%',
     sriToken: '%SETTINGS_JS_SRI%',
   },
+  {
+    html: 'user-guide.html',
+    entry: 'src/pages/user-guide.ts',
+    jsToken: '%GUIDE_JS%',
+    sriToken: '%GUIDE_JS_SRI%',
+  },
 ];
 
 rmSync(dist, { recursive: true, force: true });
@@ -94,8 +100,8 @@ writeFileSync(join(dist, 'styles.css'), stylesCss);
 const stylesSri = sriFor(Buffer.from(stylesCss, 'utf8'));
 const stylesHref = `/styles.css?v=${encodeURIComponent(version)}`;
 
-// 3. Copy static assets verbatim.
-for (const asset of ['manifest.webmanifest', 'icons', 'CNAME', 'LICENSE']) {
+// 3. Copy static assets verbatim (assets/ holds the guide screenshots).
+for (const asset of ['manifest.webmanifest', 'icons', 'assets', 'CNAME', 'LICENSE']) {
   const from = join(root, asset);
   if (existsSync(from)) cpSync(from, join(dist, asset), { recursive: true });
 }

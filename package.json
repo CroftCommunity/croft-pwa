@@ -12,6 +12,7 @@
     "e2e": "playwright test",
     "e2e:live": "playwright test --config playwright.live.config.ts",
     "serve": "node tools/serve.mjs dist 4173",
+    "guide:shots": "node tools/guide-shots.mjs",
     "test": "npm run lint && npm run typecheck && npm run unit && npm run build && npm run e2e"
   },
   "devDependencies": {

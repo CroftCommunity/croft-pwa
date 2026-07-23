@@ -186,6 +186,49 @@ main {
   color: var(--ink-muted);
 }
 
+/* --- User guide --- */
+.guide-toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.guide-toc a {
+  display: inline-block;
+  padding: var(--s-1) var(--s-3);
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--r-pill);
+  text-decoration: none;
+}
+.guide-steps {
+  padding-left: var(--s-5);
+}
+.guide-steps li {
+  margin-bottom: var(--s-2);
+}
+.guide-note {
+  border-left: 3px solid var(--accent);
+  padding-left: var(--s-3);
+  color: var(--ink-muted);
+}
+.guide-shot {
+  margin: var(--s-4) 0 0;
+}
+.guide-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--r-m);
+}
+.guide-shot figcaption {
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+  margin-top: var(--s-2);
+}
+
 @media (max-width: 40rem) {
   main {
     padding: var(--s-4) var(--s-3) var(--s-7);

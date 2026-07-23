@@ -15,6 +15,7 @@ interface Tab {
 // method, user-guide, atproto, telemetry) join this table as their pages land.
 const TABS: readonly Tab[] = [
   { href: '/index.html', label: 'Home', match: /^\/(index\.html)?$/ },
+  { href: '/user-guide.html', label: 'Guide', match: /^\/user-guide\.html$/ },
   { href: '/settings.html', label: 'Settings', match: /^\/settings\.html$/ },
 ];
 

@@ -1,6 +1,6 @@
 # Plan — croft-pwa: a meta-site on building Croft PWAs
 
-Date: 2026-07-23 · Status: P0 complete (green), P1–P4 pending
+Date: 2026-07-23 · Status: P0 + P1 complete (green), P2–P4 pending
 
 ## Problem statement
 
