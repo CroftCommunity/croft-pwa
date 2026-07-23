@@ -121,7 +121,9 @@ const stylesSri = sriFor(Buffer.from(stylesCss, 'utf8'));
 const stylesHref = `styles.css?v=${encodeURIComponent(version)}`;
 
 // 3. Copy static assets verbatim (assets/ holds the guide screenshots).
-for (const asset of ['manifest.webmanifest', 'icons', 'assets', 'CNAME', 'LICENSE']) {
+// client-metadata.json is the OAuth client_id — it must be served byte-for-byte
+// at that exact URL (docs/ATPROTO.md).
+for (const asset of ['manifest.webmanifest', 'icons', 'assets', 'CNAME', 'LICENSE', 'client-metadata.json']) {
   const from = join(root, asset);
   if (existsSync(from)) cpSync(from, join(dist, asset), { recursive: true });
 }

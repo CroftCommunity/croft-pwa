@@ -1,7 +1,9 @@
 # Plan — croft-pwa: a meta-site on building Croft PWAs
 
 Date: 2026-07-23 · Status: P0 + P1 + P2 + telemetry (local trial) complete (green);
-atproto/PDA (P3) pending. Telemetry was pulled forward from P4 to trial arecipe
+atproto/PDA (P3) in progress — public reads + sealed-box + OAuth sign-in shipped
+(RUN-ATPROTO-01/02/03); DPoP writes, the key-at-rest vault, and lexicon
+conventions remain. Telemetry was pulled forward from P4 to trial arecipe
 PR #58's counter-based design on croft-pwa; see RUN-TELEMETRY-01-SUMMARY.md and
 docs/TELEMETRY.md. A real receiver/endpoint remains a later explicit step.
 
