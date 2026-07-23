@@ -62,6 +62,21 @@ const PAGES = [
     jsToken: '%GUIDE_JS%',
     sriToken: '%GUIDE_JS_SRI%',
   },
+  {
+    html: 'reference.html',
+    entry: 'src/pages/reference.ts',
+    jsToken: '%REFERENCE_JS%',
+    sriToken: '%REFERENCE_JS_SRI%',
+  },
+  { html: 'chassis.html', entry: 'src/pages/chassis.ts', jsToken: '%CHASSIS_JS%', sriToken: '%CHASSIS_JS_SRI%' },
+  { html: 'brand.html', entry: 'src/pages/brand.ts', jsToken: '%BRAND_JS%', sriToken: '%BRAND_JS_SRI%' },
+  { html: 'pwa.html', entry: 'src/pages/pwa.ts', jsToken: '%PWA_JS%', sriToken: '%PWA_JS_SRI%' },
+  {
+    html: 'agent-method.html',
+    entry: 'src/pages/agent-method.ts',
+    jsToken: '%AGENT_METHOD_JS%',
+    sriToken: '%AGENT_METHOD_JS_SRI%',
+  },
 ];
 
 rmSync(dist, { recursive: true, force: true });

@@ -40,10 +40,19 @@ function content(): HTMLElement {
     ),
     (() => {
       const empty = el('div', 'empty');
-      empty.append(
-        el('p', undefined, 'Phase 0 is the chassis. The chapters arrive next.'),
-        el('span', 'mono', 'standards + reference implementation · one repo'),
+      const guide = el('a', undefined, 'the guide');
+      guide.href = '/user-guide.html';
+      const standards = el('a', undefined, 'the standards');
+      standards.href = '/reference.html';
+      const p = el('p');
+      p.append(
+        document.createTextNode('Start with '),
+        guide,
+        document.createTextNode(' for the build-order tour, or '),
+        standards,
+        document.createTextNode(' for the chapters.'),
       );
+      empty.append(p, el('span', 'mono', 'standards + reference implementation · one repo'));
       return empty;
     })(),
   );

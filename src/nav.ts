@@ -16,6 +16,12 @@ interface Tab {
 const TABS: readonly Tab[] = [
   { href: '/index.html', label: 'Home', match: /^\/(index\.html)?$/ },
   { href: '/user-guide.html', label: 'Guide', match: /^\/user-guide\.html$/ },
+  // Standards stays current across its index and every chapter page.
+  {
+    href: '/reference.html',
+    label: 'Standards',
+    match: /^\/(reference|chassis|brand|pwa|agent-method)\.html$/,
+  },
   { href: '/settings.html', label: 'Settings', match: /^\/settings\.html$/ },
 ];
 

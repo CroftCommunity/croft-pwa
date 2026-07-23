@@ -1,6 +1,7 @@
 # Plan — croft-pwa: a meta-site on building Croft PWAs
 
-Date: 2026-07-23 · Status: P0 + P1 complete (green), P2–P4 pending
+Date: 2026-07-23 · Status: P0 + P1 + P2 complete (green); telemetry (P4) pulled
+forward to trial the arecipe PR #58 approach on croft-pwa first; P3 atproto pending
 
 ## Problem statement
 

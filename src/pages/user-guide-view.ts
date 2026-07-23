@@ -40,20 +40,20 @@ function renderBlock(block: GuideBlock): HTMLElement {
   }
 }
 
-/** Build the full guide: intro, a table of contents, then one section per entry. */
-export function renderGuide(entries: readonly GuideEntry[]): HTMLElement {
+export interface GuideHeading {
+  readonly title: string;
+  readonly lede: string;
+}
+
+/**
+ * Build an entry set: intro (title + lede), a table of contents, then one
+ * section per entry. Used for both the user guide and each standards chapter.
+ */
+export function renderGuide(entries: readonly GuideEntry[], heading: GuideHeading): HTMLElement {
   const wrap = el('div');
 
   const intro = el('section', 'panel');
-  intro.append(
-    el('h1', undefined, 'How to build a Croft PWA'),
-    el(
-      'p',
-      undefined,
-      'A short tour of the standard, in the order you would build one. Every ' +
-        'section describes what a piece is for; the repo itself is the worked example.',
-    ),
-  );
+  intro.append(el('h1', undefined, heading.title), el('p', undefined, heading.lede));
 
   const toc = el('nav', 'guide-toc');
   toc.setAttribute('aria-label', 'Contents');

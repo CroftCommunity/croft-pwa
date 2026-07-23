@@ -7,6 +7,14 @@ import { renderGuide } from './user-guide-view';
 
 const app = document.getElementById('app');
 if (!app) throw new Error('user-guide: #app not found');
-mountShell(app, renderGuide(GUIDE));
+mountShell(
+  app,
+  renderGuide(GUIDE, {
+    title: 'How to build a Croft PWA',
+    lede:
+      'A short tour of the standard, in the order you would build one. Every ' +
+      'section describes what a piece is for; the repo itself is the worked example.',
+  }),
+);
 registerServiceWorker();
 log.info('shell mounted', 'user-guide');
