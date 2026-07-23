@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 const CHAPTERS = [
-  { href: '/chassis.html', title: 'Chassis' },
-  { href: '/brand.html', title: 'Brand' },
-  { href: '/pwa.html', title: 'PWA mechanics' },
-  { href: '/agent-method.html', title: 'Agent method' },
+  { href: 'chassis.html', title: 'Chassis' },
+  { href: 'brand.html', title: 'Brand' },
+  { href: 'pwa.html', title: 'PWA mechanics' },
+  { href: 'agent-method.html', title: 'Agent method' },
 ];
 
 test('the standards index links to every chapter', async ({ page }) => {

@@ -6,26 +6,31 @@ import { currentTheme, toggleTheme } from './theme';
 import { measure } from './measure/measure';
 
 interface Tab {
+  /** Relative href (works at a domain root or a project subpath). */
   readonly href: string;
   readonly label: string;
-  /** Active when the current pathname matches this pattern. */
-  readonly match: RegExp;
+  /** The page basenames on which this tab is the current one. */
+  readonly active: readonly string[];
 }
 
-// P0 ships Home + Settings. The standards chapters (chassis, brand, pwa, agent
-// method, user-guide, atproto, telemetry) join this table as their pages land.
 const TABS: readonly Tab[] = [
-  { href: '/index.html', label: 'Home', match: /^\/(index\.html)?$/ },
-  { href: '/user-guide.html', label: 'Guide', match: /^\/user-guide\.html$/ },
+  { href: 'index.html', label: 'Home', active: ['index.html'] },
+  { href: 'user-guide.html', label: 'Guide', active: ['user-guide.html'] },
   // Standards stays current across its index and every chapter page.
   {
-    href: '/reference.html',
+    href: 'reference.html',
     label: 'Standards',
-    match: /^\/(reference|chassis|brand|pwa|agent-method)\.html$/,
+    active: ['reference.html', 'chassis.html', 'brand.html', 'pwa.html', 'agent-method.html'],
   },
-  { href: '/metrics.html', label: 'Metrics', match: /^\/metrics\.html$/ },
-  { href: '/settings.html', label: 'Settings', match: /^\/settings\.html$/ },
+  { href: 'metrics.html', label: 'Metrics', active: ['metrics.html'] },
+  { href: 'settings.html', label: 'Settings', active: ['settings.html'] },
 ];
+
+/** The current page's basename, treating the directory root as index.html. */
+function currentPage(): string {
+  const last = location.pathname.split('/').pop();
+  return last && last.length > 0 ? last : 'index.html';
+}
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -42,7 +47,7 @@ function renderTopbar(): HTMLElement {
   const bar = el('header', 'topbar');
 
   const wordmark = el('a', 'wordmark', 'Croft PWA');
-  wordmark.href = '/index.html';
+  wordmark.href = 'index.html';
 
   const theme = el('button', 'topbar-action');
   const paint = (): void => {
@@ -60,13 +65,13 @@ function renderTopbar(): HTMLElement {
   return bar;
 }
 
-function renderTabs(pathname: string): HTMLElement {
+function renderTabs(page: string): HTMLElement {
   const nav = el('nav', 'tabs');
   nav.setAttribute('aria-label', 'Sections');
   for (const tab of TABS) {
     const link = el('a', 'tab', tab.label);
     link.href = tab.href;
-    if (tab.match.test(pathname)) link.setAttribute('aria-current', 'page');
+    if (tab.active.includes(page)) link.setAttribute('aria-current', 'page');
     nav.append(link);
   }
   return nav;
@@ -84,5 +89,5 @@ function renderBuildStamp(): HTMLElement {
 export function mountShell(app: HTMLElement, content: HTMLElement): void {
   const main = el('main');
   main.append(content);
-  app.append(renderTopbar(), renderTabs(location.pathname), main, renderBuildStamp());
+  app.append(renderTopbar(), renderTabs(currentPage()), main, renderBuildStamp());
 }

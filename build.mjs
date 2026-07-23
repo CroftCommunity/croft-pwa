@@ -105,7 +105,9 @@ function entryHref(srcEntry) {
     (o) => o.endsWith('.js') && outputs[o].entryPoint && outputs[o].entryPoint.endsWith(rel),
   );
   if (!match) throw new Error(`build: could not locate bundled entry for ${srcEntry}`);
-  return '/' + match.replace(/^dist\//, '');
+  // Relative (no leading slash) so the site works at a domain root OR under a
+  // project-page subpath like /croft-pwa/ (GitHub Pages) with no base config.
+  return match.replace(/^dist\//, '');
 }
 const pageHrefs = Object.fromEntries(PAGES.map((p) => [p.entry, entryHref(p.entry)]));
 
@@ -114,7 +116,7 @@ const pageHrefs = Object.fromEntries(PAGES.map((p) => [p.entry, entryHref(p.entr
 const stylesCss = `${readFileSync(join(root, 'tokens.css'), 'utf8')}\n${readFileSync(join(root, 'styles.css'), 'utf8')}`;
 writeFileSync(join(dist, 'styles.css'), stylesCss);
 const stylesSri = sriFor(Buffer.from(stylesCss, 'utf8'));
-const stylesHref = `/styles.css?v=${encodeURIComponent(version)}`;
+const stylesHref = `styles.css?v=${encodeURIComponent(version)}`;
 
 // 3. Copy static assets verbatim (assets/ holds the guide screenshots).
 for (const asset of ['manifest.webmanifest', 'icons', 'assets', 'CNAME', 'LICENSE']) {
@@ -124,11 +126,13 @@ for (const asset of ['manifest.webmanifest', 'icons', 'assets', 'CNAME', 'LICENS
 writeFileSync(join(dist, '.nojekyll'), '');
 
 // 4. Precache manifest keyed to this exact build.
+// Relative to the service worker's own location (its scope), so precache works
+// whether the site is at a domain root or under a project subpath.
 const precache = [
-  '/',
-  ...PAGES.map((p) => `/${p.html}`),
-  '/manifest.webmanifest',
-  '/icons/icon.svg',
+  './',
+  ...PAGES.map((p) => p.html),
+  'manifest.webmanifest',
+  'icons/icon.svg',
   stylesHref,
   ...PAGES.map((p) => pageHrefs[p.entry]),
 ];

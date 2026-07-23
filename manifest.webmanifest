@@ -2,15 +2,15 @@
   "name": "Croft PWA — building Croft PWAs",
   "short_name": "Croft PWA",
   "description": "Standards and a reference implementation for building Croft SPA/PWAs, in one repo.",
-  "start_url": "/index.html",
-  "scope": "/",
+  "start_url": "index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#ab5330",
   "background_color": "#f3efe7",
   "icons": [
     {
-      "src": "/icons/icon.svg",
+      "src": "icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

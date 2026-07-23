@@ -42,9 +42,9 @@ function content(): HTMLElement {
     (() => {
       const empty = el('div', 'empty');
       const guide = el('a', undefined, 'the guide');
-      guide.href = '/user-guide.html';
+      guide.href = 'user-guide.html';
       const standards = el('a', undefined, 'the standards');
-      standards.href = '/reference.html';
+      standards.href = 'reference.html';
       const p = el('p');
       p.append(
         document.createTextNode('Start with '),

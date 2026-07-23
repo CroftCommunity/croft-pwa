@@ -24,22 +24,22 @@ interface Chapter {
 
 const CHAPTERS: readonly Chapter[] = [
   {
-    href: '/chassis.html',
+    href: 'chassis.html',
     title: 'Chassis',
     blurb: 'Pages not a framework, one self-contained build, a service worker that never strands a fix.',
   },
   {
-    href: '/brand.html',
+    href: 'brand.html',
     title: 'Brand',
     blurb: 'A tuned tectonic palette with colour in one file, contrast recorded and checked, two honest themes.',
   },
   {
-    href: '/pwa.html',
+    href: 'pwa.html',
     title: 'PWA mechanics',
     blurb: 'Security built into the artifact, install and offline, and the console as the debugger.',
   },
   {
-    href: '/agent-method.html',
+    href: 'agent-method.html',
     title: 'Agent method',
     blurb: 'Test first, plans that record the why, run summaries that carry the evidence.',
   },
