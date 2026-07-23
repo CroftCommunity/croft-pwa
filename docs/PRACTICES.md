@@ -56,6 +56,26 @@ Precache is per-asset tolerant (one miss must not brick install). `skipWaiting`
 + `clients.claim` so a fix is not stranded; registration failure is swallowed
 (progressive enhancement).
 
+## Bundle-size budget
+
+Each page ships one self-contained bundle (no splitting), so its gzipped entry
+size is its JS weight. `build.mjs` prints every page's gz size and **fails the
+build** if any exceeds the per-page budget (20K gz) or the stylesheet exceeds
+its budget (12K gz). It is a tripwire against accidental bloat, not a limbo bar —
+raise it deliberately (e.g. when the atproto module lands) rather than letting it
+drift. Lighthouse-CI (field/runtime perf) is deliberately not adopted yet: heavier
+and flakier than a static byte budget, and the preview gives a real page to
+measure by hand when needed.
+
+## Accessibility
+
+`tests/e2e/a11y.spec.ts` runs axe-core against **every page in both themes** and
+fails on any **serious or critical** violation (minor/moderate are not gated yet).
+Contrast is theme-dependent, so both light and dark are scanned; the token WCAG
+test (`brand-tokens`) and this scan together keep colour and structure honest.
+This is enforcement, not exhortation — a regression that adds an unlabeled control
+or a low-contrast surface fails the gate.
+
 ## Service-worker updates ("ask, don't ambush")
 
 When you ship a new build the browser installs the new worker but parks it in a

@@ -5,6 +5,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, rmSync, mkdirSync, cpSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
@@ -204,6 +205,37 @@ for (const p of PAGES) {
   writeFileSync(join(dist, p.html), html);
 }
 
+// 9. Bundle-size budget. Each page ships one self-contained bundle (no
+// splitting), so its gzipped entry size IS its JS weight. A per-page ceiling
+// fails the build on accidental bloat — a tripwire, not a limbo bar. Raise it
+// deliberately (e.g. when the atproto module lands) rather than letting it drift.
+const PAGE_JS_GZ_BUDGET = 20 * 1024;
+const CSS_GZ_BUDGET = 12 * 1024;
+const gz = (file) => gzipSync(readFileSync(file)).length;
+
+const sizes = PAGES.map((p) => ({
+  page: p.html,
+  gz: gz(join(dist, pageHrefs[p.entry])),
+}));
+const cssGz = gz(join(dist, 'styles.css'));
+const kb = (n) => `${(n / 1024).toFixed(1)}K`;
 console.log(
-  `built ${version} -> dist/  (${PAGES.length} pages, sw + precache ${precache.length}, CSP+SRI on)`,
+  'sizes(gz): ' +
+    sizes.map((s) => `${s.page.replace('.html', '')} ${kb(s.gz)}`).join(' · ') +
+    ` · styles.css ${kb(cssGz)}`,
+);
+
+const over = sizes.filter((s) => s.gz > PAGE_JS_GZ_BUDGET);
+if (over.length > 0) {
+  throw new Error(
+    `build: bundle-size budget exceeded (${kb(PAGE_JS_GZ_BUDGET)} gz/page):\n` +
+      over.map((s) => `  ${s.page}: ${kb(s.gz)} gz`).join('\n'),
+  );
+}
+if (cssGz > CSS_GZ_BUDGET) {
+  throw new Error(`build: styles.css ${kb(cssGz)} gz exceeds the ${kb(CSS_GZ_BUDGET)} budget.`);
+}
+
+console.log(
+  `built ${version} -> dist/  (${PAGES.length} pages, sw + precache ${precache.length}, CSP+SRI on, budget ok)`,
 );
