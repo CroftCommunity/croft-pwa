@@ -430,6 +430,13 @@ the protocol in both; Phase 7's e2e is the real cross-check.
 1. Behavioral: `fetchVia` resolves to the correct discriminated state for ok/refused/absent/timeout.
 2. Verification: `npx vitest run tests/unit/bridge.test.ts`.
 **Validation:** Narrow — unit sufficient; Phase 7 provides the live cross-check.
+**SHIPPED GREEN (2026-07-29):** `src/reader/bridge.ts` — `BridgeTransport` seam (send/subscribe) so the
+protocol is unit-tested with a fake; `detectBridge` (ping→`__croftExtReady`, false on timeout);
+`fetchVia` → discriminated `BridgeResult` (`ok`/`not-approved`/`error`/`not-installed`); `windowTransport`
+adapts a real `Window` (posts to its own origin, filters `ev.source===win`). Extended `extension/content.js`
+to answer `__croftPing` (robust detection, not a race on the initial announce). RED first (module
+missing). `tests/unit/bridge.test.ts` 7/7 (fake-timer timeouts, id-mismatch ignored). Full unit **101**,
+lint + typecheck clean, e2e:ext still 8/8 (content.js change safe).
 
 ### Phase 6: Reader page + build/metric registration
 **Goal:** A `reader.html` page that composes bridge + parser + render, registered so it builds.
