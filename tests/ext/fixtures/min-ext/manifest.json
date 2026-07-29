@@ -1,0 +1,7 @@
+{
+  "manifest_version": 3,
+  "name": "harness min-ext",
+  "version": "0.0.1",
+  "description": "Minimal MV3 extension: a background service worker and nothing else. Used only to prove the e2e harness can load an extension and see its SW register.",
+  "background": { "service_worker": "background.js" }
+}

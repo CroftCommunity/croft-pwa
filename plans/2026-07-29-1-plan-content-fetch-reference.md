@@ -300,6 +300,16 @@ release ports and not rely on `reuseExistingServer`.
 1. Behavioral: `npm run e2e:ext` loads an extension and confirms its SW registered.
 2. Verification: `npm run e2e:ext` (harness spec green).
 **Validation:** Moderate — run `e2e:ext` locally; confirm it does NOT run under `npm test`.
+**SHIPPED GREEN (2026-07-29):** `playwright.ext.config.ts` (testDir `tests/ext`, matches
+`*.ext.spec.ts`, no webServer — specs own their origins), `tests/ext/helpers.ts` (`extensionTest(path)`
+fixture factory doing `launchPersistentContext({channel:'chromium', --load-extension})` + `startOrigins`
+serving origin A (test page) and origin B (no-ACAO reader) on **ephemeral ports** — kills the fixed-port
+collision risk), `tests/ext/fixtures/min-ext/` (SW-only), `tests/ext/fixtures/page/` (test page + probes),
+`tests/ext/page-globals.d.ts` (ambient window probe types), `e2e:ext` script, tsconfig include +=
+`playwright.ext.config.ts`. Wiring test `harness.ext.spec.ts` 2/2: SW registers (extensionId matches
+`^[a-z]{32}$`) + origin serves the page. **RED observed** first via a wrong ext path (failed exactly at
+`waitForEvent('serviceworker')`). Gate isolation confirmed: `npm test` stays **88/88**, `tests/ext` runs
+only under `e2e:ext`. channel:'chromium' = full build v149.
 
 ### Phase 3: Croft Bridge extension — core bridge
 **Goal:** The reference MV3 extension can fetch an allowed origin the page cannot, load-unpacked.
