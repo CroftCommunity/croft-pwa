@@ -244,6 +244,10 @@ Review Log entry before execution proceeds.
 ### Phase 1: Feed parser (pure)
 **Goal:** A pure, tested function turning feed XML into a typed item list, dialect-agnostic.
 **Changes:**
+- [ ] **Test env (deviation, see Review Log):** vitest is `node` with no `DOMParser`. Add **`jsdom`
+  as a devDependency** (dev/test only — never in the runtime bundle, so "no new runtime deps" holds)
+  and mark the parser test `// @vitest-environment jsdom`. Verified jsdom parses both RSS and the
+  namespaced Atom fixture via `getElementsByTagName`.
 - [ ] `src/reader/feed-parse.ts` — `parseFeed(xml: string): FeedResult` using `DOMParser`; supports
   RSS 2.0 + Atom; returns `{ source, items: {title, link, published, excerpt}[] }` or a typed parse
   error; links validated to http/https; excerpt is plain text (strip tags via `textContent`).
@@ -562,3 +566,19 @@ never fires headless, unreachable headful). The **refusal path works and is auto
 Phase 4 write-set +1 (manifest.test.json).
 **Status:** Both BLOCKING questions (D1 feeds, D2 consent) now resolved. The plan is execution-ready
 from Phase 1; D4 folds into Phase 1, D5 is decided.
+
+### Phase 1 execution — 2026-07-29
+**Deviation (user-approved):** vitest's environment is `node` (no `DOMParser`; no jsdom/happy-dom
+installed). Added **`jsdom` as a devDependency** and set the parser test to `// @vitest-environment
+jsdom`. Consistent with "no new *runtime* deps" — jsdom never enters the shipped bundle. Verified
+firsthand that jsdom's `DOMParser` + `getElementsByTagName` parse both the RSS and the namespaced
+Atom fixtures (`parsererror` false, 45 entries, title/link extracted). `npm audit` flags jsdom's
+transitive dev deps only; not addressed (dev-only, no runtime exposure).
+**Phase 1 SHIPPED GREEN (2026-07-29):** `src/reader/feed-parse.ts` (`parseFeed` → typed `FeedResult`,
+RSS 2.0 + Atom via local-name matching, http(s)-only links, script/style-and-tag-stripped plain-text
+excerpts, never throws) + `tests/unit/feed-parse.test.ts` (5 cases incl. malformed→error, escaped-HTML
+and CDATA-script excerpt stripping, `javascript:` link dropped) + trimmed real fixtures
+`tests/fixtures/feeds/sample-{rss,atom}.xml`. Gate: parser 5/5, full unit suite **94/94**, lint +
+typecheck clean. Fixture loading uses `path.join` not `new URL(template)` (Vite globs the latter and
+fails). Not yet wired to a page — wiring test is Phase 6/7. Vitest via `rtk proxy` (the RTK hook
+mangles bare `npx`).

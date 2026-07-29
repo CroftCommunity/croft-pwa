@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>AT Protocol Blog</title>
+  <link href="https://atproto.com/"/>
+  <updated>2025-07-21T00:00:00Z</updated>
+  <entry>
+    <id>https://atproto.com/blog/at-protocol-trademark</id>
+    <title>AT Protocol Trademark</title>
+    <link href="https://atproto.com/blog/at-protocol-trademark"/>
+    <published>2025-07-21T00:00:00Z</published>
+    <updated>2025-07-21T00:00:00Z</updated>
+    <summary>An update on the AT Protocol trademark and how it may be used.</summary>
+  </entry>
+  <entry>
+    <id>https://atproto.com/blog/federation-open</id>
+    <title>Federation now open</title>
+    <link href="https://atproto.com/blog/federation-open"/>
+    <published>2024-02-21T00:00:00Z</published>
+    <updated>2024-02-21T00:00:00Z</updated>
+    <summary>Self-hosting a PDS is now possible on the open network.</summary>
+  </entry>
+</feed>

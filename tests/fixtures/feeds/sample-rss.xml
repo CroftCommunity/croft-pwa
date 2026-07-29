@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>AT Protocol Blog</title>
+    <link>https://atproto.com/blog</link>
+    <description>News and updates from the AT Protocol team</description>
+    <item>
+      <title>AT Protocol Trademark</title>
+      <link>https://atproto.com/blog/at-protocol-trademark</link>
+      <guid>https://atproto.com/blog/at-protocol-trademark</guid>
+      <pubDate>Mon, 21 Jul 2025 00:00:00 GMT</pubDate>
+      <description>An update on the &lt;b&gt;AT Protocol&lt;/b&gt; trademark and how it may be used.</description>
+    </item>
+    <item>
+      <title>Federation now open</title>
+      <link>https://atproto.com/blog/federation-open</link>
+      <guid>https://atproto.com/blog/federation-open</guid>
+      <pubDate>Wed, 21 Feb 2024 00:00:00 GMT</pubDate>
+      <description>Self-hosting a PDS is now possible on the open network.</description>
+    </item>
+  </channel>
+</rss>
