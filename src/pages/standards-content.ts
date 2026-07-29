@@ -277,3 +277,112 @@ export const AGENT_METHOD: readonly GuideEntry[] = [
     ],
   },
 ];
+
+export const CONTENT_FETCH: readonly GuideEntry[] = [
+  {
+    testid: 'fetch-wall',
+    title: 'The wall: a backendless PWA cannot read the open web directly',
+    toc: 'The wall',
+    blocks: [
+      {
+        kind: 'prose',
+        text:
+          'A Croft PWA has no server of its own, so when it needs content it does ' +
+          'not host — an RSS feed, a public API, a page to render in a reader — it ' +
+          'must fetch across origins from the browser. The same-origin policy blocks ' +
+          'reading that response unless the far server opts in with CORS headers, and ' +
+          'most of the open web does not. A static site cannot, by itself, be a ' +
+          'reader of arbitrary content.',
+      },
+      {
+        kind: 'note',
+        text:
+          'This is a property of the browser, not a bug to work around. The question ' +
+          'is which capability we add, and at what cost to trust.',
+      },
+    ],
+  },
+  {
+    testid: 'fetch-rule',
+    title: 'The rule: a browser extension grants the read',
+    toc: 'The rule',
+    blocks: [
+      {
+        kind: 'prose',
+        text:
+          'A Croft PWA reaches cross-origin content through a small companion browser ' +
+          'extension, not a bundled or user-run proxy server. The extension holds the ' +
+          'host permission for the reader origin; a content script relays a request ' +
+          'from the page to the extension background, which performs the fetch and ' +
+          'hands the bytes back in-process. The page asks; the extension reads.',
+      },
+      {
+        kind: 'prose',
+        text:
+          'So the user-friendly workflow is install-an-extension, not run-a-shell-' +
+          'command. A feature that needs the extension stays visibly disabled with a ' +
+          'clear prompt until it is present.',
+      },
+    ],
+  },
+  {
+    testid: 'fetch-not-a-proxy',
+    title: 'Why not a local proxy',
+    toc: 'Not a proxy',
+    blocks: [
+      {
+        kind: 'prose',
+        text:
+          'A local proxy the user runs would force the HTTPS page to fetch ' +
+          'http://localhost — the exact insecure, private-network request browsers ' +
+          'scrutinise (mixed content; Private Network Access preflights). The extension ' +
+          'model sidesteps that surface entirely: the page never makes the cross-origin ' +
+          'or insecure request, so being a secure context never gates the read, and a ' +
+          'public-to-public read does not trigger Private Network Access at all. ' +
+          'Preferring the extension is not only about UX; it is a smaller ' +
+          'browser-policy surface.',
+      },
+    ],
+  },
+  {
+    testid: 'fetch-consent',
+    title: 'Consent, not a blanket bridge',
+    toc: 'Consent',
+    blocks: [
+      {
+        kind: 'prose',
+        text:
+          'Any page the content script matches can ask the extension to fetch, so the ' +
+          'extension is the gate, not the page. It fetches only origins the user has ' +
+          'approved and refuses the rest itself — a refusal the page can distinguish ' +
+          'from a network error. The PWA also detects whether the extension is present ' +
+          'and degrades gracefully when it is not, rather than hanging.',
+      },
+      {
+        kind: 'steps',
+        items: [
+          'The PWA detects the extension by a ready signal, and shows connected or a prompt to install.',
+          'A request names a reader origin; the extension checks it against the user-approved allowlist.',
+          'An approved origin is fetched and relayed; a non-approved origin is refused by the extension.',
+        ],
+      },
+    ],
+  },
+  {
+    testid: 'fetch-proven',
+    title: 'What is proven, and what is deferred',
+    toc: 'Proven',
+    blocks: [
+      {
+        kind: 'note',
+        text:
+          'The mechanism is validated end to end in the discovery experiment ' +
+          'extension-content-fetch: a page blocked by CORS receives the content through ' +
+          'the extension; the secure-context mixed-content sidestep, the consent ' +
+          'allowlist, and presence detection all hold; and a live run read a real ' +
+          'remote RSS feed the page could not. Firefox parity is parked — Chromium ' +
+          'first, to get started.',
+      },
+    ],
+  },
+];

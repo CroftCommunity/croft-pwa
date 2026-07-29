@@ -44,6 +44,11 @@ const CHAPTERS: readonly Chapter[] = [
     blurb: 'Test first, plans that record the why, run summaries that carry the evidence.',
   },
   {
+    href: 'content-fetch.html',
+    title: 'Content fetch',
+    blurb: 'Reach cross-origin content a static site cannot: an extension grants the read, not a proxy. Consent-gated, presence-detected.',
+  },
+  {
     href: 'atproto.html',
     title: 'atproto / PDA',
     blurb: 'Read the records, not the pages: resolve a handle to a DID to a PDS, live. (Read path; auth is next.)',

@@ -80,6 +80,12 @@ const PAGES = [
   },
   { html: 'metrics.html', entry: 'src/pages/metrics.ts', jsToken: '%METRICS_JS%', sriToken: '%METRICS_JS_SRI%' },
   { html: 'atproto.html', entry: 'src/pages/atproto.ts', jsToken: '%ATPROTO_JS%', sriToken: '%ATPROTO_JS_SRI%' },
+  {
+    html: 'content-fetch.html',
+    entry: 'src/pages/content-fetch.ts',
+    jsToken: '%CONTENT_FETCH_JS%',
+    sriToken: '%CONTENT_FETCH_JS_SRI%',
+  },
 ];
 
 rmSync(dist, { recursive: true, force: true });

@@ -12,6 +12,7 @@ for (const path of [
   '/brand.html',
   '/pwa.html',
   '/agent-method.html',
+  '/content-fetch.html',
   '/metrics.html',  '/atproto.html',
 ]) {
   test(`${path}: no CSP violations, no cross-origin scripts`, async ({ page }) => {

@@ -12,6 +12,7 @@ const PAGES = [
   '/brand.html',
   '/pwa.html',
   '/agent-method.html',
+  '/content-fetch.html',
   '/metrics.html',  '/atproto.html',
   '/settings.html',
 ];

@@ -6,6 +6,7 @@ const GUIDE_CHAPTERS = [
   { href: 'brand.html', title: 'Brand' },
   { href: 'pwa.html', title: 'PWA mechanics' },
   { href: 'agent-method.html', title: 'Agent method' },
+  { href: 'content-fetch.html', title: 'Content fetch' },
 ];
 // Every card in the index — includes the bespoke, interactive atproto page.
 const INDEX_CHAPTERS = [...GUIDE_CHAPTERS, { href: 'atproto.html', title: 'atproto / PDA' }];
