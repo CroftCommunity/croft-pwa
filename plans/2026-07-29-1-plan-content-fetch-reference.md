@@ -300,16 +300,12 @@ release ports and not rely on `reuseExistingServer`.
 1. Behavioral: `npm run e2e:ext` loads an extension and confirms its SW registered.
 2. Verification: `npm run e2e:ext` (harness spec green).
 **Validation:** Moderate — run `e2e:ext` locally; confirm it does NOT run under `npm test`.
-**SHIPPED GREEN (2026-07-29):** `playwright.ext.config.ts` (testDir `tests/ext`, matches
-`*.ext.spec.ts`, no webServer — specs own their origins), `tests/ext/helpers.ts` (`extensionTest(path)`
-fixture factory doing `launchPersistentContext({channel:'chromium', --load-extension})` + `startOrigins`
-serving origin A (test page) and origin B (no-ACAO reader) on **ephemeral ports** — kills the fixed-port
-collision risk), `tests/ext/fixtures/min-ext/` (SW-only), `tests/ext/fixtures/page/` (test page + probes),
-`tests/ext/page-globals.d.ts` (ambient window probe types), `e2e:ext` script, tsconfig include +=
-`playwright.ext.config.ts`. Wiring test `harness.ext.spec.ts` 2/2: SW registers (extensionId matches
-`^[a-z]{32}$`) + origin serves the page. **RED observed** first via a wrong ext path (failed exactly at
-`waitForEvent('serviceworker')`). Gate isolation confirmed: `npm test` stays **88/88**, `tests/ext` runs
-only under `e2e:ext`. channel:'chromium' = full build v149.
+**SHIPPED (2026-07-29), then REVISED in Phase 3 — see below.** Initial Phase 2 built a Playwright
+*test-runner* harness (`playwright.ext.config.ts` + `tests/ext/helpers.ts` `extensionTest()` fixture +
+`*.ext.spec.ts`). It passed for a no-content-script extension but proved **intermittently unreliable for
+the real content-script extension** in Phase 3 (see Phase 3 note). Pivoted to a **node runner** — the
+reliable channel. `startOrigins` (origin A test page + origin B no-ACAO reader, ephemeral ports),
+`fixtures/min-ext/`, `fixtures/page/` all carried over.
 
 ### Phase 3: Croft Bridge extension — core bridge
 **Goal:** The reference MV3 extension can fetch an allowed origin the page cannot, load-unpacked.
@@ -349,6 +345,22 @@ page's own window). Harden against arbitrary senders.
    fetch directly.
 2. Verification: `npm run e2e:ext` (bridge spec green).
 **Validation:** Moderate — hermetic e2e + manual load-unpacked smoke in a real Chrome.
+**SHIPPED GREEN (2026-07-29):** `extension/manifest.json` + `background.js` (host-approval gate:
+static `APPROVED_HOSTS` set mirroring static `host_permissions`; Phase 4 swaps to runtime
+`chrome.permissions`, gate shape unchanged) + `content.js` (page↔bg `postMessage` bridge, hardened:
+same-window only, responses posted to the page origin not `*`). `content_scripts` match the production
+origin (`https://croftcommunity.github.io/croft-pwa/*`) + local (`http://localhost/*`); host_permissions
+cover localhost + the three D1 feed origins. eslint gained an `extension/**/*.js` block (browser +
+serviceworker + webextensions globals). **RED observed** (no `extension/` dir → page probes never
+attach). **Test-runner pivot (important):** the Phase-2 Playwright *test-runner* harness intermittently
+**wedged the content-script extension's page context ~20–30s** through all retries in this environment;
+warmup/globalSetup/profile-isolation/commit-navigation/bounded-timeouts all failed. A node driver of the
+identical scenario is **100% reliable** (proved 8/8, then the tier 5/5 on 3 cold runs) — the same channel
+the discovery spike and `@live` use. So the tier is now a **node runner**: `tests/ext/harness.mjs`
+(startOrigins, launchExtension, check/summarise) + `tests/ext/run-ext.mjs` (scenarios), `e2e:ext` =
+`node tests/ext/run-ext.mjs`. Removed: `playwright.ext.config.ts`, `helpers.ts`, `*.ext.spec.ts`,
+`global-setup.ts`, `page-globals.d.ts` (+ tsconfig include entry). Gate isolation intact: `npm test`
+still **94 unit + 88 e2e**; lint + typecheck clean. `tests/ext/README.md` records the rationale.
 
 ### Phase 4: Croft Bridge extension — per-host consent
 **Goal:** The extension fetches only user-approved origins, enforced at the browser-permission level.

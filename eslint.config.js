@@ -32,4 +32,23 @@ export default tseslint.config(
       globals: { ...globals.node },
     },
   },
+  // The node-driven extension e2e runner. Node globals for the harness, plus
+  // browser globals because the page.evaluate() callbacks reference `window`.
+  {
+    files: ['tests/**/*.mjs'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
+  // The Croft Bridge extension: plain browser JS running as a content script and
+  // an MV3 service worker, with the webextension `chrome` API. Not type-checked
+  // (it ships as-is, no build step), but linted for correctness.
+  {
+    files: ['extension/**/*.js'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.serviceworker, ...globals.webextensions },
+    },
+  },
 );
