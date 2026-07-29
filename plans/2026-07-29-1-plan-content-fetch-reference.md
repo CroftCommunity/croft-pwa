@@ -467,6 +467,14 @@ additive (a PAGES entry, a metric key) and do not alter other pages. No parallel
 2. Verification: `npm run build` (reader in the manifest) + `npx playwright test tests/e2e/... `
    smoke of the no-extension state (add a minimal case or reuse a11y once Phase 8 enumerates it).
 **Validation:** Moderate — build + open the page locally in the no-extension state.
+**SHIPPED GREEN (2026-07-29):** `reader.html` + `src/pages/reader.ts` (composes `detectBridge`/`fetchVia`
++ `parseFeed` + a **text-only** renderer — item titles/links/dates/excerpts via `textContent`, links
+http(s)-validated + `rel="noopener noreferrer"`, so the strict CSP is unchanged and no `connect-src`
+widening is needed). Default sources = the D1 feeds (atproto.com, docs.bsky.app). Graceful states:
+`not-installed`→install CTA, `not-approved`→approve CTA, loading/empty. `build.mjs` PAGES += reader;
+`page_reader` metric declared. Item headings are `h2` (clean heading order in the loaded state). Build:
+reader 5.3K gz (budget 20K), 12 pages. Verified the no-extension state renders the install CTA (node,
+served from dist). Default gate still 101 unit + 88 e2e (reader enumerated in Phase 8a).
 
 ### Phase 7: Reader ↔ extension end-to-end (the dogfood)
 **Goal:** The reader, with the Croft Bridge extension, renders real (fixture) feed items; degrades

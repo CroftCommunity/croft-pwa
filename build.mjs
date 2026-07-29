@@ -86,6 +86,7 @@ const PAGES = [
     jsToken: '%CONTENT_FETCH_JS%',
     sriToken: '%CONTENT_FETCH_JS_SRI%',
   },
+  { html: 'reader.html', entry: 'src/pages/reader.ts', jsToken: '%READER_JS%', sriToken: '%READER_JS_SRI%' },
 ];
 
 rmSync(dist, { recursive: true, force: true });

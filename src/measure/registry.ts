@@ -101,6 +101,13 @@ export const META = {
     disclosure: 'That the content-fetch chapter was opened',
     info: 'route',
   },
+  page_reader: {
+    type: 'page',
+    description: 'Opened the atmosphere reader',
+    expires: '2027-12-31',
+    disclosure: 'That the atmosphere reader was opened',
+    info: 'route',
+  },
   feature_theme_toggle: {
     type: 'feature',
     description: 'Switched the light/dark theme',
