@@ -124,9 +124,20 @@ Verified in Phase 0 (D1 executed 2026-07-29 — egress via `curl`, headers inspe
   Non-qualifiers seen: `bsky.social/about/blog/rss.xml` sends `ACAO: *` (would not need the
   extension); several guessed paths 404'd. Recorded so we don't re-probe.
 
+Verified in Phase 0 (D2 executed 2026-07-29 — throwaway MV3 probe + Playwright):
+- **MV3 per-host consent — the interactive grant is NOT automatable.** With `optional_host_permissions`
+  and a user-gesture click calling `chrome.permissions.request({origins:['http://localhost/*']})`, the
+  callback **never fires headless** (a native permission prompt Playwright can't reach; the same
+  native UI can't be clicked headful either). BUT: the **consent gate's refusal path works and is
+  automatable** — before any grant, `permissions.contains` is `false` and the background SW `fetch` of
+  the host is blocked (`TypeError`). And grant→fetch-allowed is already proven by the spike (a granted
+  host permission fetches through). **Design implication (does not threaten the model):** keep
+  `optional_host_permissions` + `permissions.request` as the real consent UX (real users click the
+  prompt in real Chrome); test the refusal path automatically, test the allowed branch via a
+  test-only manifest that pre-declares the host in `host_permissions`, and verify the real grant flow
+  **manually** in Phase 4 validation. (Probe: scratchpad, throwaway — deleted.)
+
 NOT yet verified — see Phase 0 / Open Questions:
-- MV3 `optional_host_permissions` + runtime `chrome.permissions.request({origins})` per-host consent
-  behavior (user-gesture requirement; SW fetch enabled after grant). **→ D2 experiment (next).**
 - `DOMParser` extraction of RSS 2.0 **and** Atom fields — low risk; fixtures now in hand
   (atproto.com RSS + Atom), probe folds into Phase 1.
 - Whether extension e2e (persistent context, `channel: 'chromium'`, new-headless) runs green in the
@@ -190,7 +201,10 @@ default sequential.
     status/content-type/ACAO-absent evidence, plus one captured sample response per feed.
   - **Disposition:** `keep-as-fixture` — the captured samples become `tests/fixtures/feeds/*.xml`;
     the URL list becomes the reader's default source set. Do NOT hardcode any feed URL before this.
-- [ ] **D2: Does MV3 per-host runtime consent work as designed?**
+- [x] **D2 (RESOLVED 2026-07-29): Does MV3 per-host runtime consent work as designed?** Finding: the
+  interactive `permissions.request` grant is NOT automatable (native prompt); the refusal path IS
+  automatable and works; grant→allowed is spike-proven. Phase 4 adjusted accordingly (below). Details
+  in Verified Assumptions.
   - **Probe:** A throwaway minimal extension with `optional_host_permissions` for one host and a
     button that calls `chrome.permissions.request({origins:['https://host/*']})`; confirm (a) the
     request requires/consumes a user gesture, (b) after grant, the background SW `fetch` of that host
@@ -331,12 +345,18 @@ page's own window). Harden against arbitrary senders.
   reflect state via `chrome.permissions.contains`; background checks `contains` before fetching.
 **Call chain:** options page toggle → `chrome.permissions.request` → background `contains` gate →
 fetch allowed/blocked.
-**Wiring test:** `tests/ext/consent.ext.spec.ts` — an approved origin is fetched; a non-approved
-origin is refused by the extension (not by CORS); after revoke, refused again.
-**Depends on:** Phase 3, Phase 0 (D2 verified).
+**Wiring test:** `tests/ext/consent.ext.spec.ts` — **adjusted per D2 (the live grant prompt is not
+automatable):** (a) automated — with no grant, `permissions.contains` is false and the background
+refuses the fetch (`refused:true`), not a CORS error; (b) automated — the **allowed branch** is
+exercised with a test-only manifest variant (`extension/manifest.test.json`) that pre-declares the
+reader host in `host_permissions`, proving the `contains`-gate lets a granted host through; (c)
+**manual** (Phase 4 validation) — the real options-page `permissions.request` grant flow in real
+Chrome, since the native prompt can't be driven by Playwright.
+**Depends on:** Phase 3, Phase 0 (D2 verified — grant prompt not automatable).
 **Read-set:** `tests/ext/helpers.ts`, `extension/background.js`.
 **Write-set:** `extension/manifest.json`, `extension/options.html`, `extension/options.js`,
-`tests/ext/consent.ext.spec.ts`.
+`extension/manifest.test.json` (test-only pre-granted variant, per D2), `tests/ext/consent.ext.spec.ts`.
+**(5 files — cohesive consent unit; the test manifest is a small fixture. Flagged.)**
 **Shared-state contract:** Test grants/removes a permission inside its own persistent-context profile
 (disposable, per-test); no persistence outside the temp profile.
 **Risks:** `permissions.request` gesture requirement in a test context — the spec must trigger it via
@@ -530,3 +550,15 @@ Store = not now; `e2e:ext` → fold into CI once D5 proves it. Open Questions se
 docs.bsky.app blog RSS, bsky.app profile RSS). BLOCKING #1 cleared. Verified Assumptions updated.
 **Still Phase 0:** D2 (consent experiment) is the next probe; D4 folds into Phase 1 (fixtures in
 hand); D5 decided (separate `e2e:ext`, CI-fold after proof).
+
+### Phase 0 D2 — 2026-07-29
+**D2 executed + RESOLVED (BLOCKING #2 cleared).** Throwaway MV3 probe + Playwright. Finding: the
+interactive `chrome.permissions.request` host grant is **not automatable** (native prompt; callback
+never fires headless, unreachable headful). The **refusal path works and is automatable** (no grant
+→ `contains:false` → SW fetch blocked). Grant→allowed is spike-proven.
+**Changed:** Verified Assumptions record the finding; Phase 0 D2 marked resolved; **Phase 4 adjusted**
+— consent e2e now tests (a) automated refusal, (b) automated allowed-branch via a test-only
+`extension/manifest.test.json` that pre-declares the host, (c) manual real-grant validation in Chrome.
+Phase 4 write-set +1 (manifest.test.json).
+**Status:** Both BLOCKING questions (D1 feeds, D2 consent) now resolved. The plan is execution-ready
+from Phase 1; D4 folds into Phase 1, D5 is decided.
