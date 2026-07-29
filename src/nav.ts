@@ -19,6 +19,7 @@ interface Tab {
 
 const TABS: readonly Tab[] = [
   { href: 'index.html', label: 'Home', active: ['index.html'] },
+  { href: 'reader.html', label: 'Reader', active: ['reader.html'] },
   { href: 'user-guide.html', label: 'Guide', active: ['user-guide.html'] },
   // Standards stays current across its index and every chapter page.
   {

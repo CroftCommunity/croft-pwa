@@ -7,6 +7,7 @@ for (const width of [320, 360, 390]) {
   for (const path of [
     '/index.html',
     '/settings.html',
+    '/reader.html',
     '/user-guide.html',
     '/reference.html',
     '/chassis.html',

@@ -6,6 +6,7 @@ import AxeBuilder from '@axe-core/playwright';
 // moderate are not gated yet — tighten later if we choose to.
 const PAGES = [
   '/index.html',
+  '/reader.html',
   '/user-guide.html',
   '/reference.html',
   '/chassis.html',

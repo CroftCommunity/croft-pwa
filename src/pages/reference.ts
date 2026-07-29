@@ -49,6 +49,11 @@ const CHAPTERS: readonly Chapter[] = [
     blurb: 'Reach cross-origin content a static site cannot: an extension grants the read, not a proxy. Consent-gated, presence-detected.',
   },
   {
+    href: 'reader.html',
+    title: 'Atmosphere reader',
+    blurb: 'The content-fetch chapter, running: a backendless reader for CORS-blocked Bluesky/atproto feeds via the Croft Bridge extension.',
+  },
+  {
     href: 'atproto.html',
     title: 'atproto / PDA',
     blurb: 'Read the records, not the pages: resolve a handle to a DID to a PDS, live. (Read path; auth is next.)',

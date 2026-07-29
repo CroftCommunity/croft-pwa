@@ -8,8 +8,14 @@ const GUIDE_CHAPTERS = [
   { href: 'agent-method.html', title: 'Agent method' },
   { href: 'content-fetch.html', title: 'Content fetch' },
 ];
-// Every card in the index — includes the bespoke, interactive atproto page.
-const INDEX_CHAPTERS = [...GUIDE_CHAPTERS, { href: 'atproto.html', title: 'atproto / PDA' }];
+// Every card in the index — the guide-rendered chapters plus the bespoke
+// interactive pages (the atmosphere reader = the content-fetch chapter's live
+// demo, and the atproto page).
+const INDEX_CHAPTERS = [
+  ...GUIDE_CHAPTERS,
+  { href: 'reader.html', title: 'Atmosphere reader' },
+  { href: 'atproto.html', title: 'atproto / PDA' },
+];
 
 test('the standards index links to every chapter', async ({ page }) => {
   await page.goto('/reference.html');

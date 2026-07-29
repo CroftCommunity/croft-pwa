@@ -369,6 +369,22 @@ export const CONTENT_FETCH: readonly GuideEntry[] = [
     ],
   },
   {
+    testid: 'fetch-demo',
+    title: 'See it working: the Atmosphere reader',
+    toc: 'Demo',
+    blocks: [
+      {
+        kind: 'prose',
+        text:
+          'The Reader tab is this chapter running. It aggregates real RSS feeds about ' +
+          'the Bluesky and AT Protocol ecosystem — ordinary websites the same-origin ' +
+          'policy blocks a static page from reading — by asking the Croft Bridge ' +
+          'extension for each source you approve. Without the extension it shows an ' +
+          'install prompt rather than failing; with it, the feed items appear.',
+      },
+    ],
+  },
+  {
     testid: 'fetch-proven',
     title: 'What is proven, and what is deferred',
     toc: 'Proven',

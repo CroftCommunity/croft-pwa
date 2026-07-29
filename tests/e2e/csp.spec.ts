@@ -6,6 +6,7 @@ import { test, expect } from '@playwright/test';
 for (const path of [
   '/index.html',
   '/settings.html',
+  '/reader.html',
   '/user-guide.html',
   '/reference.html',
   '/chassis.html',

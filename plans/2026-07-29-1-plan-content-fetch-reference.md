@@ -566,6 +566,16 @@ roles); the CTA must be a real focusable control. Bundle budget re-checked.
   once D5 proves it green on ubuntu CI.** Ship it as a separate `e2e:ext` first; fold into the `npm
   test`/CI gate after D5 confirms headless-extension works in CI (a Phase 8a follow-up step).
 
+## Phase 8a outcome (site integration)
+
+**SHIPPED GREEN (2026-07-29):** the reader is now first-class **and** a standard, per the Q3 decision.
+Nav gains a top-level **Reader** tab (`src/nav.ts`); the Standards index gains an "Atmosphere reader"
+card (`src/pages/reference.ts`); the Content-fetch chapter gains a "See it working" demo entry
+(`src/pages/standards-content.ts`). e2e enumerations extended: `/reader.html` added to `a11y.spec.ts`
+(axe, both themes — the install-CTA state is accessible), `csp.spec.ts`, `mobile-fit.spec.ts` (no
+overflow at 320/360/390 — the 6-tab nav fits), and `standards.spec.ts` `INDEX_CHAPTERS` (reader is an
+interactive page like atproto, not a GUIDE chapter). Default gate now **101 unit + 94 e2e**.
+
 ## Review Log
 
 ### Pass 1 — 2026-07-29
