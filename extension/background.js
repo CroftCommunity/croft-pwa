@@ -6,30 +6,27 @@
 // that is what sidesteps the mixed-content / Private Network Access surface a
 // local proxy would incur.
 //
-// Consent, not a blanket bridge: a fetch is served only for an APPROVED host.
-// In Phase 3 the approval is a static host allowlist (below) that mirrors the
-// static host_permissions in the manifest. Phase 4 replaces both with runtime
-// user consent (optional_host_permissions + chrome.permissions), leaving this
-// gate's shape unchanged.
-const APPROVED_HOSTS = new Set([
-  'localhost', // the e2e reader origin (host_permissions: http://localhost/*)
-  'atproto.com',
-  'docs.bsky.app',
-  'bsky.app',
-]);
-
+// Consent, not a blanket bridge: a fetch is served only for an origin the user
+// has APPROVED, and approval is a real browser permission — the extension asks
+// `chrome.permissions.contains` before every fetch. Feed origins are declared
+// `optional_host_permissions` and granted at runtime from the options page
+// (chrome.permissions.request); the local dev origin (http://localhost/*) is a
+// static host_permission. This makes "consent" a browser-enforced property, not
+// a JS list. (The interactive grant prompt is native UI — see docs; the refusal
+// branch and a permitted origin are what the e2e exercises.)
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.kind !== 'croft-fetch' || typeof msg.url !== 'string') return false;
   (async () => {
-    let host;
+    let origin;
     try {
-      host = new URL(msg.url).hostname;
+      origin = new URL(msg.url).origin;
     } catch {
       sendResponse({ ok: false, error: 'invalid url' });
       return;
     }
-    if (!APPROVED_HOSTS.has(host)) {
-      sendResponse({ ok: false, refused: true, error: `origin not approved: ${host}` });
+    const granted = await chrome.permissions.contains({ origins: [`${origin}/*`] });
+    if (!granted) {
+      sendResponse({ ok: false, refused: true, error: `origin not approved: ${origin}` });
       return;
     }
     try {

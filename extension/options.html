@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Croft Bridge — sources</title>
+    <style>
+      body { font: 15px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+      h1 { font-size: 1.3rem; }
+      p { color: #444; }
+      ul { list-style: none; padding: 0; }
+      li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 0; border-top: 1px solid #ddd; }
+      .host { font-family: ui-monospace, monospace; }
+      .sub { color: #666; font-size: 0.85em; }
+      button { font: inherit; padding: 0.35rem 0.8rem; cursor: pointer; }
+      .on { color: #137333; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Croft Bridge — approved sources</h1>
+    <p>
+      Croft Bridge reads a source only after you approve it here. Approving grants this extension
+      permission to fetch that one site on the reader's behalf; revoking takes it back. Nothing else
+      is accessed.
+    </p>
+    <ul id="sources"></ul>
+    <script src="options.js"></script>
+  </body>
+</html>

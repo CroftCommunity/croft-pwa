@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Croft Bridge",
   "version": "0.0.1",
-  "description": "Grants a Croft PWA the cross-origin reads a backendless static site cannot do itself — host-scoped, for the atmosphere reader.",
+  "description": "Grants a Croft PWA the cross-origin reads a backendless static site cannot do itself — per-source consent, for the atmosphere reader.",
   "background": { "service_worker": "background.js" },
   "content_scripts": [
     {
@@ -11,8 +11,9 @@
       "run_at": "document_start"
     }
   ],
-  "host_permissions": [
-    "http://localhost/*",
+  "options_page": "options.html",
+  "host_permissions": ["http://localhost/*"],
+  "optional_host_permissions": [
     "https://atproto.com/*",
     "https://docs.bsky.app/*",
     "https://bsky.app/*"

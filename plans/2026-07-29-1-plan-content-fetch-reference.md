@@ -395,6 +395,19 @@ headless.
 2. Verification: `npm run e2e:ext` (consent spec green).
 **Validation:** Moderate — e2e + manual: open the options page in real Chrome, approve a host, watch
 the reader start working.
+**SHIPPED GREEN (2026-07-29):** background gate is now `chrome.permissions.contains({origins:[origin+'/*']})`
+— a **real browser permission**, not a JS list. `manifest.json`: feed origins moved to
+`optional_host_permissions` (granted at runtime), `http://localhost/*` kept as a static `host_permission`
+(dev/e2e), `options_page` added. `options.html` + `options.js` = the per-source consent surface
+(`permissions.request`/`remove`, state via `contains`). **Probe first** (no assumed behavior): confirmed
+`contains` for a specific-port origin matches a port-agnostic `http://localhost/*` grant (`has:true`), and
+`127.0.0.1`/`atproto.com`/`evil.com` are `has:false`. **RED→GREEN:** the consent scenario ("an ungranted
+feed origin is refused") FAILED against the old static-`APPROVED_HOSTS` code (it approved atproto.com),
+PASSED after the switch. Consent e2e (hermetic): ungranted feed origin refused (no network call),
+permitted localhost passes the same gate, non-permitted `127.0.0.1` (same server, other host) refused.
+**Not automatable (D2), so manual:** the real `permissions.request` grant prompt — validated by opening
+the options page in real Chrome. `manifest.test.json` deemed unnecessary (localhost-static covers the
+permitted branch). Tier **8/8 on 3 cold runs**; default gate still 94 unit + 88 e2e; lint + typecheck clean.
 
 ### Phase 5: Reader bridge client (PWA side)
 **Goal:** A typed PWA-side client that detects the extension, requests a fetch, and reports state.

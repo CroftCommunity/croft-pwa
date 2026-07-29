@@ -56,11 +56,15 @@ export async function startOrigins(readerBody, readerContentType = 'application/
   });
   await new Promise((r) => pwa.listen(0, '127.0.0.1', r));
   await new Promise((r) => reader.listen(0, '127.0.0.1', r));
-  const readerOrigin = `http://localhost:${reader.address().port}`;
+  const readerPort = reader.address().port;
+  const readerOrigin = `http://localhost:${readerPort}`;
   return {
     pwaUrl: `http://localhost:${pwa.address().port}/`,
     readerUrl: `${readerOrigin}/feed.xml`,
     readerOrigin,
+    // The same reader server reached via 127.0.0.1 — a different host that the
+    // extension is NOT permitted for, used to exercise the refusal branch.
+    readerUrl127: `http://127.0.0.1:${readerPort}/feed.xml`,
     stop: () =>
       Promise.all([
         new Promise((r) => pwa.close(r)),

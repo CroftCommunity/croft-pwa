@@ -65,4 +65,39 @@ async function gotoTestPage(page, url) {
   }
 }
 
+// --- Scenario 4 (Phase 4 consent): the gate is browser permissions, not a list -
+// A feed origin the user has NOT granted is refused by the extension (before any
+// network call), while the dev-permitted localhost origin is allowed. The real
+// grant flow (chrome.permissions.request) is a native prompt that cannot be
+// driven headless (Phase 0 D2) — it is validated manually; here we prove the
+// refusal branch and that a permitted origin passes the same gate.
+{
+  const { context, close } = await launchExtension(CROFT_BRIDGE);
+  const origins = await startOrigins(FEED);
+  try {
+    const page = await context.newPage();
+    await gotoTestPage(page, origins.pwaUrl);
+    await page.waitForFunction(() => window.__extReady(), { timeout: 15_000 }).catch(() => undefined);
+
+    // Ungranted feed origin → refused by the permission gate, not fetched.
+    const feed = await page.evaluate((u) => window.__viaExtension(u), 'https://atproto.com/rss.xml');
+    check(
+      'consent: an ungranted feed origin is refused by the permission gate',
+      feed.ok === false && feed.refused === true,
+      feed.error,
+    );
+
+    // Permitted origin (localhost is in static host_permissions for dev) → allowed.
+    const allowed = await page.evaluate((u) => window.__viaExtension(u), origins.readerUrl);
+    check('consent: a permitted origin passes the same gate', allowed.ok === true, allowed.ok ? `status ${allowed.status}` : allowed.error);
+
+    // A non-permitted local host (same server, different hostname) → refused.
+    const other = await page.evaluate((u) => window.__viaExtension(u), origins.readerUrl127);
+    check('consent: a non-permitted host is refused', other.ok === false && other.refused === true, other.error);
+  } finally {
+    await origins.stop();
+    await close();
+  }
+}
+
 process.exit(summarise('extension e2e'));
