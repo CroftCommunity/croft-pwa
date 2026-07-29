@@ -73,6 +73,46 @@ export async function startOrigins(readerBody, readerContentType = 'application/
   };
 }
 
+/** Serve a static directory (e.g. the built `dist/`). Returns its origin + stop. */
+export async function serveDir(dir) {
+  const server = http.createServer((req, res) => {
+    const rel = (req.url === '/' || req.url === undefined ? '/index.html' : req.url).split('?')[0];
+    try {
+      res.setHeader('Content-Type', CTYPE[extname(rel)] ?? 'application/octet-stream');
+      res.end(readFileSync(join(dir, rel)));
+    } catch {
+      res.statusCode = 404;
+      res.end('not found');
+    }
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  return { origin: `http://localhost:${server.address().port}`, stop: () => new Promise((r) => server.close(r)) };
+}
+
+/** Serve a single feed body with no ACAO header. Returns its URL + stop. */
+export async function serveFeed(body, contentType = 'application/rss+xml; charset=utf-8') {
+  const server = http.createServer((_req, res) => {
+    res.setHeader('Content-Type', contentType);
+    res.end(body);
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  return { url: `http://localhost:${server.address().port}/feed.xml`, stop: () => new Promise((r) => server.close(r)) };
+}
+
+/** Launch a plain persistent Chromium context with NO extension loaded. */
+export async function launchPlain() {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'croft-plain-'));
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    channel: 'chromium',
+    args: ['--no-first-run', '--no-default-browser-check'],
+  });
+  const close = async () => {
+    await context.close();
+    rmSync(userDataDir, { recursive: true, force: true });
+  };
+  return { context, close };
+}
+
 /** Launch a persistent Chromium context with an unpacked extension loaded. */
 export async function launchExtension(extensionPath) {
   const userDataDir = mkdtempSync(join(tmpdir(), 'croft-ext-'));

@@ -500,6 +500,13 @@ mutation beyond that.
 2. Verification: `npm run e2e:ext` (reader spec green).
 **Validation:** Broad — e2e + manual: load the extension in real Chrome, approve a real D1 feed, see
 live items render.
+**SHIPPED GREEN (2026-07-29):** the full chain runs hermetically — the built `dist/reader.html` pointed
+at a local fixture feed via a new **`?src=`** param (a real feature: share/add a source; http(s)-only,
+still permission-gated so it can't widen what's fetched) → bridge → extension → feed → parser → render.
+Added `serveDir`/`serveFeed`/`launchPlain` to the harness; run-ext.mjs auto-builds `dist/` if missing.
+Two scenarios: with the extension the reader renders `reader-dogfood-item`; with **no** extension
+(`launchPlain`) it shows the install CTA. `e2e:ext` **10/10** (3 cold runs). reader.ts threads the source
+list through `loadFeeds` (was a closed-over const). Rebuilt dist (reader 5.4K gz).
 
 ### Phase 8: Site integration, enumerations, and docs
 **Goal:** The reader is a first-class, discoverable page held to every site-wide check; docs land.

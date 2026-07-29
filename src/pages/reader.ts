@@ -20,10 +20,24 @@ interface Source {
   readonly url: string;
   readonly title: string;
 }
-const SOURCES: readonly Source[] = [
+const DEFAULT_SOURCES: readonly Source[] = [
   { url: 'https://atproto.com/rss.xml', title: 'AT Protocol Blog' },
   { url: 'https://docs.bsky.app/blog/rss.xml', title: 'Bluesky docs blog' },
 ];
+
+/**
+ * The sources to read: any `?src=<feed-url>` query params (repeatable — a shared
+ * or added source), else the defaults. Only http(s) URLs are honoured; each still
+ * has to be approved in the extension, so this cannot widen what is fetched.
+ */
+function sources(search: string): readonly Source[] {
+  const custom = new URLSearchParams(search)
+    .getAll('src')
+    .map((url) => url.trim())
+    .filter((url) => url.startsWith('https://') || url.startsWith('http://'));
+  if (custom.length > 0) return custom.map((url) => ({ url, title: url }));
+  return DEFAULT_SOURCES;
+}
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -109,7 +123,11 @@ function ctaApprove(): HTMLElement {
   return panel;
 }
 
-async function loadFeeds(transport: BridgeTransport, mount: HTMLElement): Promise<void> {
+async function loadFeeds(
+  transport: BridgeTransport,
+  mount: HTMLElement,
+  feeds: readonly Source[],
+): Promise<void> {
   const list = el('div', 'reader-list');
   list.setAttribute('data-testid', 'reader-list');
   const status = el('p', 'reader-status');
@@ -119,7 +137,7 @@ async function loadFeeds(transport: BridgeTransport, mount: HTMLElement): Promis
 
   let rendered = 0;
   let anyRefused = false;
-  for (const source of SOURCES) {
+  for (const source of feeds) {
     const result = await fetchVia(transport, source.url);
     if (result.kind === 'not-installed') {
       mount.replaceChildren(intro(), ctaInstall());
@@ -148,7 +166,7 @@ async function loadFeeds(transport: BridgeTransport, mount: HTMLElement): Promis
     mount.replaceChildren(intro(), anyRefused ? ctaApprove() : ctaInstall());
     return;
   }
-  status.textContent = `${rendered} item${rendered === 1 ? '' : 's'} from ${SOURCES.length} sources.`;
+  status.textContent = `${rendered} item${rendered === 1 ? '' : 's'} from ${feeds.length} sources.`;
 }
 
 const app = document.getElementById('app');
@@ -160,10 +178,11 @@ registerServiceWorker();
 log.info('shell mounted', 'reader');
 
 const transport = windowTransport(window);
+const feeds = sources(window.location.search);
 void detectBridge(transport).then((present) => {
   if (!present) {
     mount.replaceChildren(intro(), ctaInstall());
     return;
   }
-  void loadFeeds(transport, mount);
+  void loadFeeds(transport, mount, feeds);
 });

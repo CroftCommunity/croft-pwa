@@ -3,7 +3,9 @@
 // Node-driven for reliability (see harness.mjs header). Scenarios are added here
 // as later phases land (Phase 4 consent, Phase 7 reader).
 import { join } from 'node:path';
-import { startOrigins, launchExtension, check, summarise, REPO } from './harness.mjs';
+import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { startOrigins, serveDir, serveFeed, launchExtension, launchPlain, check, summarise, REPO } from './harness.mjs';
 
 const MIN_EXT = join(REPO, 'tests', 'ext', 'fixtures', 'min-ext');
 const CROFT_BRIDGE = join(REPO, 'extension');
@@ -97,6 +99,63 @@ async function gotoTestPage(page, url) {
   } finally {
     await origins.stop();
     await close();
+  }
+}
+
+// --- Scenario 5 (Phase 7 dogfood): the real reader page renders feed items via
+// the extension, and shows the install CTA without it. Uses the built dist/
+// reader.html pointed at a local fixture feed (?src=), which the extension
+// permits (localhost is a static host_permission) — so the whole chain runs
+// hermetically: reader page → bridge → extension → feed → parser → render.
+{
+  const dist = join(REPO, 'dist');
+  if (!existsSync(join(dist, 'reader.html'))) {
+    execFileSync('node', ['build.mjs'], { cwd: REPO, stdio: 'ignore' });
+  }
+  const READER_FEED =
+    '<?xml version="1.0"?><rss version="2.0"><channel><title>Fixture Feed</title>' +
+    '<item><title>reader-dogfood-item</title><link>https://example.com/post</link>' +
+    '<description>a fixture entry</description></item></channel></rss>';
+
+  // With the extension: reader renders the fixture item.
+  {
+    const site = await serveDir(dist);
+    const feed = await serveFeed(READER_FEED);
+    const { context, close } = await launchExtension(join(REPO, 'extension'));
+    try {
+      const page = await context.newPage();
+      await page.goto(`${site.origin}/reader.html?src=${encodeURIComponent(feed.url)}`, {
+        waitUntil: 'commit',
+        timeout: 15_000,
+      });
+      const item = await page
+        .waitForSelector('[data-testid="reader-item"]', { timeout: 15_000 })
+        .then((h) => h.textContent())
+        .catch(() => null);
+      check('reader: renders a feed item fetched via the extension', !!item && item.includes('reader-dogfood-item'), item ?? 'no item');
+    } finally {
+      await close();
+      await feed.stop();
+      await site.stop();
+    }
+  }
+
+  // Without the extension: reader shows the install CTA (graceful degrade).
+  {
+    const site = await serveDir(dist);
+    const { context, close } = await launchPlain();
+    try {
+      const page = await context.newPage();
+      await page.goto(`${site.origin}/reader.html`, { waitUntil: 'commit', timeout: 15_000 });
+      const cta = await page
+        .waitForSelector('[data-testid="reader-cta-install"]', { timeout: 15_000 })
+        .then(() => true)
+        .catch(() => false);
+      check('reader: shows the install CTA without the extension', cta);
+    } finally {
+      await close();
+      await site.stop();
+    }
   }
 }
 
