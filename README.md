@@ -11,8 +11,9 @@ Two things at once:
 
 1. **The standards** — how a Croft PWA is built: chassis (build, service worker,
    design tokens, navigation, the test gate), brand system, agent working
-   method, a reusable user-guide generator, atproto/PDA integration, and a
-   telemetry posture. Each is (or will be) a real page in the site.
+   method, a reusable user-guide generator, atproto/PDA integration, a telemetry
+   posture, and **content fetch** (how a backendless PWA reaches cross-origin
+   content via a companion browser extension). Each is a real page in the site.
 2. **A reference implementation** — the smallest working app that exercises
    every standard and proves it against the gate. Its chassis is what a new
    Croft PWA copies to start.
@@ -42,6 +43,31 @@ The chassis is the template. Copy `build.mjs`, `tokens.css`, `styles.css`,
 then replace the page shells and `src/pages/*` with your app. Retune the palette
 in `tokens.css` (keep hex confined there; keep the WCAG ratios recorded) and the
 brand chapter's guidance applies unchanged.
+
+## The Croft Bridge extension (content fetch)
+
+A backendless Croft PWA cannot read most of the open web directly — the
+same-origin policy blocks cross-origin responses that lack CORS headers. The
+**Croft Bridge** extension (`extension/`) grants that read, per source, on the
+user's approval. The Atmosphere reader (the **Reader** tab) dogfoods it against
+real Bluesky/atproto ecosystem feeds. Full rationale: [`docs/CONTENT-FETCH.md`](./docs/CONTENT-FETCH.md)
+and the site's *Content fetch* chapter.
+
+Load it for local development (Chrome/Chromium; Firefox/Safari are not supported yet):
+
+```
+1. chrome://extensions  →  enable Developer mode
+2. "Load unpacked"       →  select this repo's extension/ folder
+3. Open the Reader tab; the extension's options page lists the sources —
+   approve one, then reload. Un-approved sources are refused by the extension.
+```
+
+Its end-to-end tests are a **separate tier**, not part of the default gate
+(they drive real Chromium with the extension loaded):
+
+```
+npm run e2e:ext     # node tests/ext/run-ext.mjs — see tests/ext/README.md
+```
 
 ## Status
 

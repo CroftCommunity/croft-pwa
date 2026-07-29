@@ -576,6 +576,15 @@ card (`src/pages/reference.ts`); the Content-fetch chapter gains a "See it worki
 overflow at 320/360/390 — the 6-tab nav fits), and `standards.spec.ts` `INDEX_CHAPTERS` (reader is an
 interactive page like atproto, not a GUIDE chapter). Default gate now **101 unit + 94 e2e**.
 
+## Phase 8b outcome (docs)
+
+**SHIPPED (2026-07-29):** `README.md` gains a "Croft Bridge extension (content fetch)" section
+(load-unpacked steps, the `e2e:ext` tier, Chromium-only note) and the extension in the standards list.
+New `docs/CONTENT-FETCH.md` — the long-form rationale (problem, extension-vs-proxy incl. the
+mixed-content/PNA argument, how it works, consent model, proven/deferred), matching the `ATPROTO.md`/
+`PRACTICES.md` long-form convention; the site's Content-fetch chapter stays the short form. Docs only —
+gate unchanged (101 unit + 94 e2e).
+
 ## Review Log
 
 ### Pass 1 — 2026-07-29
