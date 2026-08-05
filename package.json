@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "A meta-site on building Croft SPA/PWAs: the standards and their reference implementation in one repo, built to the standards it documents.",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
