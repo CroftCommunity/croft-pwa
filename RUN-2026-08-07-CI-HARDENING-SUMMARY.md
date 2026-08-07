@@ -48,11 +48,13 @@ quiet argument for the simpler deploy, now recorded in `ci.yml`.
 - `engine-strict` proven in both directions (table above) before being committed,
   because it also applies to dependencies' declared ranges — nothing objected.
 - Both workflows parse (`yaml.safe_load`).
-- **Pending:** rule §8 says to pull the hatch once. Dispatching `ci.yml` on `main`
-  is the proof, and it can only run once this file is on `main` (a dispatch
-  trigger is not usable until then). Until that happens, §8 is documented and
-  implemented but **not demonstrated here** — it *was* demonstrated in `fun`,
-  where a dispatch published successfully after the equivalent fix.
+- **§8 demonstrated, not just implemented** (2026-08-07, after this landed on
+  `main` — a dispatch trigger is not usable before that). Run `31189831204`,
+  `event: workflow_dispatch`, `gate: success` → `deploy: success`, and
+  `gh-pages` moved to `323951f deploy 0a75ef1… to Pages` with the site serving
+  200. The hatch has been pulled once, which is what the rule asks for; the
+  push-triggered run (`31189685883`) passed independently, so both paths to
+  production are known-good rather than assumed.
 
 ## Raised, not taken
 
