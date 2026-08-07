@@ -198,6 +198,41 @@ Set it generously — perhaps 3× the honest runtime. The number is a backstop, 
 a budget, and a timeout that trips on a slow-but-healthy run teaches people to
 raise it without reading.
 
+### It fired for real, two days after it was written
+
+This rule read as prudence until 2026-08-07, when it caught something. `fun` run
+**31211892961**: the `e2e` job stalled inside
+`npx playwright install --with-deps chromium webkit`, mid-download of an apt
+package from `azure.archive.ubuntu.com`:
+
+```
+19:57:46  Get:59 .../libflite1 amd64 2.2-6build3 [13.6 MB]
+20:02:22  ##[error]The operation was canceled.
+```
+
+Four and a half minutes of no progress, then `timeout-minutes: 30` ended it.
+Without the rule that job had **six hours** of doing nothing available to it, on a
+run whose `rust` and `build` jobs had already gone green.
+
+Three things worth taking from it:
+
+- **The failure was outside the repo entirely.** Nothing in the diff went near
+  Playwright or apt. A gate depends on every third party it reaches out to, and
+  those are the dependencies nobody lists.
+- **A stall is not an error.** The step never failed; it just stopped making
+  progress. Anything you build to recover from this — a retry, an alert — has to
+  bound *time*, not just catch a non-zero exit. `fun`'s fix wraps each attempt in
+  `timeout 300` before retrying, because a bare retry loop would have sat in the
+  same hung download.
+- **The job timeout is the wrong granularity for recovery, and the right one for
+  safety.** It stopped the waste, but it also threw away two passing jobs and a
+  successful build. Step-level bounds are what let a run survive; the job-level
+  one is what stops a bad day becoming an expensive one. Have both.
+
+The lesson is not "raise the timeout". It is that a green `rust` and a green
+`build` were discarded because an unrelated Ubuntu mirror was slow, and the only
+reason that cost five minutes instead of six hours was one line of YAML.
+
 ## 8. Keep a manual path, and make sure it can publish
 
 `workflow_dispatch` is not a convenience. On **2026-08-06** a GitHub Actions
@@ -283,3 +318,21 @@ Neither is a reason to leave the browser suite out. `fun` ran 418 e2e tests —
 every game's wiring test, axe in both themes, every share-link round-trip — on
 whichever machine the author happened to use, while its checklist claimed they
 gated. The claim and the workflow disagreed, and people trust the workflow.
+
+**Budget its fragility too, not just its minutes.** A browser suite is the part of
+a gate that reaches furthest outside your repo: browser binaries, and the system
+libraries they need. Cache what you can and bound what you cannot.
+
+- **The browser binaries cache cleanly.** `actions/cache` on
+  `~/.cache/ms-playwright`, keyed on `package-lock.json`, with
+  `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` on the `npm ci` so the install does not
+  happen twice. That is ~300MB that changes only when Playwright's version does.
+- **The system libraries do not.** `--with-deps` shells out to apt on a fresh
+  runner every time, and nothing you cache in the Playwright directory changes
+  that. It is seconds when the mirror is healthy and unbounded when it is not —
+  see rule 7's incident, where it stalled 4.5 minutes and took a whole run with
+  it. Wrap each attempt in `timeout` and retry it.
+
+Worth being precise about which half is which: it is easy to look at a stalled
+`playwright install` and conclude the browsers are not cached, when they are and
+the apt call underneath is the uncacheable part.
