@@ -26,14 +26,27 @@ brand-token discipline) and [skylite](https://github.com/CroftCommunity/skylite)
 ## Quick start
 
 ```
-npm install
+npm install         # refuses on the wrong Node — see .nvmrc + .npmrc
 npm run test        # the gate: lint · typecheck · unit · build · e2e
 npm run build       # → dist/  (self-contained static site)
 npm run serve       # serve dist/ at http://localhost:4173
 ```
 
+**Node is pinned to `.nvmrc`** and the pin is enforced, not merely declared:
+`engine-strict=true` makes `npm` refuse a mismatched runtime rather than print a
+warning you scroll past. Use a version manager that reads the pin —
+`brew install fnm && fnm install`, plus `eval "$(fnm env --use-on-cd)"` in your
+shell — and Node switches when you `cd` here. The reasoning, and the day this
+cost in a sibling repo, is in [`docs/CI.md`](./docs/CI.md) §6.
+
 Agents: read [`CLAUDE.md`](./CLAUDE.md) first — it is the operating manual
 (the gate, the conventions, the local e2e gotcha).
+
+**[`docs/CI.md`](./docs/CI.md) is the canonical writeup of the CI shape for every
+repo in this workspace**, not just this one — eight rules, each with the specific
+failure it prevents, plus a checklist for auditing a repo against it. This repo is
+the reference implementation, so `.github/workflows/ci.yml` and that document are
+meant to be read together.
 
 ## Starting a new Croft PWA from this
 

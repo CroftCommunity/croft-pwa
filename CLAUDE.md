@@ -22,6 +22,19 @@ Sub-parts: `npm run lint`, `npm run typecheck`, `npm run unit`, `npm run build`,
 `npm run e2e`. There is no `@live` tier yet (it arrives with the atproto module
 in Phase 3, gated behind `npm run e2e:live`).
 
+**CI runs this exact command**, and the shape of the workflow around it is
+documented in `docs/CI.md` — the canonical version for the whole workspace, since
+this repo is the reference implementation. Change `ci.yml` and you are changing
+the documented standard: update both, or the repo stops proving the thing it
+claims.
+
+**Node is pinned and the pin is enforced.** `.nvmrc` says 22; `engines` states the
+range; `.npmrc` sets `engine-strict=true` so `npm` **refuses** a mismatched
+runtime instead of warning. Resolve it locally with a version manager that reads
+`.nvmrc` (`fnm install`, plus `eval "$(fnm env --use-on-cd)"` in your shell). The
+sibling `fun` repo had the first two and not the last two, and a developer ran the
+whole suite on Node 25 for a day while CI was green — see `docs/CI.md` §6.
+
 **Local e2e gotcha — stale reused server.** Playwright starts its own static
 server on port 4173 and, locally (`reuseExistingServer` is true off-CI), will
 **reuse** one that is already running. If a server from a previous run is still

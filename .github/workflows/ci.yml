@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # The manual path. GitHub throttles *webhook deliveries* during an Actions
+  # incident (observed 2026-08-06: pushes stopped triggering runs for hours), and
+  # dispatch is exempt — it is the only way to gate and publish while that lasts.
+  # `preview.yml` already calls dispatch "the RELIABLE path" for the same reason;
+  # the gate needs it just as much. See docs/CI.md §8.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,6 +18,11 @@ permissions:
 jobs:
   gate:
     runs-on: ubuntu-latest
+    # A job with no timeout inherits GitHub's 6-hour default. A test that hangs
+    # rather than fails will sit there for all of it — and a hang reports as
+    # "every test passed, run failed", which is not a shape anyone reads quickly.
+    # See docs/CI.md §7.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -19,10 +30,27 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # Browsers change only when Playwright's version does, so key the cache on
+      # the lockfile. `--with-deps` still runs on a hit: the system libraries it
+      # installs live outside this directory, and it is seconds once the binaries
+      # are already there.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       # The one gate, identical to `npm run test` locally:
       # lint · typecheck · unit · build · e2e.
       - run: npm test
+      # A browser failure is close to unreadable without its trace and
+      # screenshots — without this the next step is pushing console.log commits
+      # to inspect a machine you cannot open.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   # Publish the built dist/ to the ROOT of the gh-pages branch, which GitHub
   # Pages serves. Why a branch and not the Actions/artifact source: per-PR
@@ -31,10 +59,19 @@ jobs:
   # root while PRESERVING pr-preview/, so a production deploy never wipes a live
   # preview. Set Pages source to "Deploy from a branch → gh-pages / root".
   # The push is plain git (scripts/pages-deploy.sh) — no third-party deploy action.
+  # Dispatch-safe by construction: this job REBUILDS the site rather than
+  # consuming an artifact uploaded by `gate`, so it has no step conditioned on
+  # the event name that could skip under `workflow_dispatch`. The sibling `fun`
+  # repo publishes via an artifact and had exactly that bug — its upload was
+  # gated `if: github.event_name == 'push'` while its deploy was gated on the ref
+  # alone, so a dispatch skipped the upload and then failed looking for it. If
+  # you switch this to an artifact-based deploy, the publish steps must be
+  # conditioned `!= 'pull_request'`, never `== 'push'`. See docs/CI.md §8.
   deploy:
     needs: gate
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write # push the built site to the gh-pages branch
     # Serialize every writer of gh-pages (this job + the preview workflow) so

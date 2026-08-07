@@ -47,6 +47,8 @@ concurrency:
 jobs:
   preview:
     runs-on: ubuntu-latest
+    # See docs/CI.md §7 — no job should be able to sit for GitHub's 6-hour default.
+    timeout-minutes: 20
     steps:
       # Resolve the PR context from EITHER the pull_request event or the
       # workflow_dispatch input, and enforce the trust gate (same-repo only — a

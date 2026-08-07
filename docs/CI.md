@@ -123,6 +123,123 @@ in CI. The direction is the tell: a local-only *red* is merely annoying, but the
 identical setup can produce a local-only *green*, which is how a regression walks
 onto `main` past a developer who ran the suite and saw it pass.
 
+### Declaring the pin is not enforcing it
+
+Three halves, not two — and the third was learned the expensive way on
+2026-08-06. `fun` had **both** `.nvmrc` (22) and `engines: ">=22 <23"`, and a
+developer still ran the entire suite on Node 25 for a day, because
+**`engines` only warns**. The warning scrolls past `npm ci` and nothing stops
+you. The eleven failures were then carried for hours as "known, pre-existing,
+green on CI" — which is what version drift looks like from the inside: not a
+loud error, a *category of noise you learn to skip*.
+
+So the pin needs something that refuses:
+
+```
+# .npmrc
+engine-strict=true    # npm refuses to install, instead of warning
+```
+
+Verified in this repo: on the pinned Node, `npm ci` exits 0; on Node 24 it stops
+with
+
+```
+npm error code EBADENGINE
+npm error engine Not compatible with your version of node/npm: croft-pwa@0.1.0
+```
+
+...naming the project rather than some transitive dependency, which is what makes
+it actionable. (`engine-strict` does apply to dependencies' declared ranges too,
+so add it and run `npm ci` once before trusting it — here nothing objected.)
+
+And because refusing to install is only useful if the fix is obvious, the repo
+also says how to *resolve* the pin locally. Use a version manager that reads
+`.nvmrc`:
+
+```bash
+brew install fnm
+fnm install                          # reads .nvmrc
+eval "$(fnm env --use-on-cd)"        # in ~/.zshrc — switches Node on cd
+```
+
+The full ladder, then: **`.nvmrc` declares · `setup-node` reads · `engines` +
+`engine-strict` refuse · a version manager resolves.** Skip the third and you get
+`fun`'s lost day; skip the fourth and the refusal has no remedy to point at.
+
+## 7. Give every job a `timeout-minutes`
+
+A job without one inherits GitHub's **six-hour** default. That is not a
+theoretical waste: a test that *hangs* rather than fails will sit there for all of
+it, and hangs are exactly what you cannot predict.
+
+The shape is worth recognising because it does not look like a hang. In `fun`, a
+browser-suite test blocked the vitest worker long enough that its RPC heartbeat
+timed out, and the run reported:
+
+```
+Test Files  33 passed | 1 skipped (35)
+     Tests  329 passed | 3 skipped (334)
+    Errors  3 errors        ← [vitest-worker]: Timeout calling "onTaskUpdate"
+```
+
+**Every test passed and the run failed.** A timeout does not fix that, but it
+bounds it — and on a day when runners are scarce (the same week, jobs were being
+cancelled after 15 minutes waiting for capacity), an unbounded job is a queue
+everybody else waits behind.
+
+```yaml
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20   # generous vs the ~6 min this actually takes
+```
+
+Set it generously — perhaps 3× the honest runtime. The number is a backstop, not
+a budget, and a timeout that trips on a slow-but-healthy run teaches people to
+raise it without reading.
+
+## 8. Keep a manual path, and make sure it can publish
+
+`workflow_dispatch` is not a convenience. On **2026-08-06** a GitHub Actions
+incident throttled *webhook deliveries*, and the status page said so plainly:
+
+> "Webhook triggers remain throttled to aid recovery, so many push and pull
+> request events are not triggering new workflow runs."
+
+Pushes stopped starting runs for hours. Dispatch was exempt, and was the only way
+to gate a commit or publish a fix. Two ways to get this wrong, both seen that day:
+
+**Not having one.** This repo's `ci.yml` had no `workflow_dispatch` until
+2026-08-07, so during that window there was no path to production at all. The
+insight was already in the repo — `preview.yml`'s header calls dispatch "the
+RELIABLE path" when events do not fire — just not applied to the gate.
+
+**Having one that cannot publish.** `fun` had dispatch, and it was broken in a way
+nobody could see: its Pages upload steps were conditioned
+
+```yaml
+- uses: actions/upload-pages-artifact@v3
+  if: github.event_name == 'push'        # ← wrong test
+```
+
+while the `deploy` job was guarded on the ref alone. A dispatch on `main`
+therefore **skipped the upload and then ran deploy anyway**, failing with `No
+artifacts named "github-pages" were found`. The intent had been "skip publishing
+plumbing on PRs" — so the condition wanted to be `!= 'pull_request'`, not
+`== 'push'`. The two guards disagreed about what a publishable run is.
+
+Two rules follow:
+
+- Any step that produces or consumes a publish artifact is conditioned
+  **`!= 'pull_request'`**, never `== 'push'`.
+- **Pull the hatch once.** An escape hatch nobody has ever opened is not an
+  escape hatch; it is a comment. Dispatch the workflow deliberately, watch it
+  publish, and only then believe the manual path exists.
+
+A deploy that *rebuilds* rather than consuming an artifact — as this repo's does —
+is dispatch-safe by construction, because it has no step conditioned on the event
+name at all. That is a quiet argument for the simpler deploy.
+
 ## Auditing another repo against this
 
 - [ ] `on:` includes `pull_request`
@@ -133,7 +250,36 @@ onto `main` past a developer who ran the suite and saw it pass.
 - [ ] one gate command, identical locally and in CI
 - [ ] every toolchain the gate uses is pinned in-repo, and resolved explicitly
       rather than off `PATH`
+- [ ] the pin is **enforced**, not just declared — `engine-strict=true` (or the
+      equivalent) refuses a wrong runtime, and the repo says which version
+      manager reads the pin
+- [ ] every job has a `timeout-minutes`
+- [ ] `workflow_dispatch` is present, and publish steps are conditioned
+      `!= 'pull_request'` so a dispatch can actually deploy
+- [ ] **read the count, not the tick.** A gate that ran zero tests is green.
+      Confirm the log states how much it ran — `Running 418 tests using 2
+      workers` → `415 passed` — because a green tick over nothing looks exactly
+      like a green tick. This is the cheap daily version of the deliberate-
+      violation check below; do both.
 
 Reference implementations: this repo (`ci.yml`, Node/Playwright) and
 `fun` (`deploy.yml`, Node + Rust — see its `rust-toolchain.toml` and
 `tools/rust-gate.sh` for the pinning half).
+
+## Budgeting a browser suite, honestly
+
+Two numbers to have before you argue about whether e2e belongs in CI, both
+measured in `fun` on 2026-08-07:
+
+- **A runner gives Playwright 2 workers; a laptop gives 7.** The same 418 tests
+  take ~55s locally and **4.5 minutes** on CI. Predicting from local wall-clock
+  understates it by roughly 5×, which is how "this will be free" was wrong.
+- **Parallel jobs help, but only up to the longest one.** Splitting e2e into its
+  own job next to the unit gate took the run from 5.3 → 6.2 minutes rather than
+  leaving it flat, because e2e then *became* the longest job. Free would have
+  required it to finish inside the job it runs beside.
+
+Neither is a reason to leave the browser suite out. `fun` ran 418 e2e tests —
+every game's wiring test, axe in both themes, every share-link round-trip — on
+whichever machine the author happened to use, while its checklist claimed they
+gated. The claim and the workflow disagreed, and people trust the workflow.
