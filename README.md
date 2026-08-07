@@ -42,6 +42,9 @@ cost in a sibling repo, is in [`docs/CI.md`](./docs/CI.md) §6.
 Agents: read [`CLAUDE.md`](./CLAUDE.md) first — it is the operating manual
 (the gate, the conventions, the local e2e gotcha).
 
+Backlog: [`TODO.md`](./TODO.md) — what is known and deferred, with the reasoning
+(including why the gate runs Chrome only, on purpose, for now).
+
 **[`docs/CI.md`](./docs/CI.md) is the canonical writeup of the CI shape for every
 repo in this workspace**, not just this one — eight rules, each with the specific
 failure it prevents, plus a checklist for auditing a repo against it. This repo is

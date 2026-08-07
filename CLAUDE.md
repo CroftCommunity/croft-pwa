@@ -85,6 +85,15 @@ CI is immune (it never reuses a server).
   "not in this run"). Each run records a `RUN-*-SUMMARY.md` at the repo root with
   red→green evidence, the gate output, and a files-touched ledger.
 
+## Known gaps
+
+`TODO.md` holds the deferred items and *why* each was deferred. The one most
+likely to surprise: **the gate runs Chrome only** — `playwright.config.ts`'s two
+projects are both `devices['Desktop Chrome']`, so `mobile-fit.spec.ts` tests
+layout width at 320/360/390px, not the WebKit engine every iOS browser runs.
+Deliberate as of 2026-08-07; do not read the mobile-fit spec as mobile-engine
+coverage.
+
 ## Structure
 
 - `build.mjs` — the whole build: esbuild bundle + content hash, tokens+styles
