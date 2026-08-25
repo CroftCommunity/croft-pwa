@@ -1,5 +1,9 @@
 # TODO — croft-pwa
 
+> Repo operations / deferred items only. The product/design backlog of record is
+> `discovery/alpha/ROADMAP_TODO.md`; the tracking scheme is `CroftC/.claude/TRACKING.md`.
+> Cross-reference E-numbers where an item here implements a backlog row.
+
 Backlog for the repo that is both the **standards** and the **reference
 implementation** that proves them. Dated plans live in `plans/`; per-run evidence
 in `RUN-*-SUMMARY.md`. This file is the running list of things known and deferred.
