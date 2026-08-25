@@ -26,7 +26,7 @@ npm run test          # lint · typecheck · unit (vitest) · build · e2e (play
 ```
 
 Sub-parts: `npm run lint`, `npm run typecheck`, `npm run unit`, `npm run build`,
-`npm run e2e`. There is no `@live` tier yet (it arrives with the atproto module
+`npm run e2e`. The `@live` tier exists (`npm run e2e:live`, local only — see `docs/ATPROTO.md`; it arrived with the atproto module
 in Phase 3, gated behind `npm run e2e:live`).
 
 **CI runs this exact command**, and the shape of the workflow around it is
@@ -117,7 +117,7 @@ coverage.
 ## Roadmap (phases)
 
 P0 chassis + gate (done) · P1 user-guide generator + guide-shots tool ·
-P2 standards content pages (chassis/brand/pwa/agent-method) · P3 atproto/PDA
+P2 standards content pages (chassis/brand/pwa/agent-method) · P3 (done — `docs/ATPROTO.md`) atproto/PDA
 module (OAuth/DPoP/lexicons/sealed-box) + `@live` tier · P4 telemetry posture
 chapter. Each phase leaves the gate green.
 

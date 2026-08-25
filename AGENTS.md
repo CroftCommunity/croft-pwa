@@ -34,8 +34,9 @@ The chassis in this repo is the template. The load-bearing standards:
   evidence and a files-touched ledger.
 
 The atproto/PDA integration standard (OAuth with PKCE + PAR + DPoP, public
-repo reads, custom lexicons, client-side sealed-box encryption) lands in Phase 3;
-until then, [skylite](https://github.com/CroftCommunity/skylite) is the reference
+repo reads, custom lexicons, client-side sealed-box encryption) is SHIPPED (`docs/ATPROTO.md` — OAuth sign-in, DPoP writes, vault). Before adopting an
+OAuth approach anywhere, grep `CroftC/.claude/DECISIONS.md` § Prior-art router — the
+pick is the owner's call; [skylite](https://github.com/CroftCommunity/skylite) remains the deeper reference
 implementation to read.
 
 ## Provenance

@@ -3,7 +3,8 @@
 A Croft PWA treats the user's AT Protocol data server (PDS) as the backend: the
 user owns their records, and the app is one client among many. There is no
 server of ours in the middle. This is the substrate the whole family is built
-on; skylite is the deepest reference implementation.
+on; skylite is the deepest reference implementation. (Workspace-wide OAuth prior art +
+choice criteria: `CroftC/.claude/DECISIONS.md` § Prior-art router.)
 
 ## The read path (shipped here)
 
