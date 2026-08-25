@@ -1,5 +1,12 @@
 # CLAUDE.md — notes for agents working in this repo
 
+## Identity (workspace architecture)
+
+**Scope:** The Croft standards/meta-site (itself a PWA) and the workspace CI reference implementation (`docs/CI.md`); documented port of the atproto OAuth client.
+**Not this repo:** the OAuth origin (skylite is the deeper reference — `docs/ATPROTO.md`).
+**Provides:** CI reference, standards pages. **Consumes:** skylite OAuth lineage.
+Card + altitudes: `CroftC/.claude/ARCHITECTURE.md`.
+
 croft-pwa is a **meta-site about building Croft SPA/PWAs**, and it is itself a
 Croft PWA — built to the standards it documents. The repo is two things at once:
 the **standards** (the chapters of the site) and a **reference implementation**
