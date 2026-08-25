@@ -116,3 +116,11 @@ chapter. Each phase leaves the gate green.
 
 Git identity here is chasemp (`chase@owasp.org`, `github-personal`). Do not
 commit or push unless asked.
+
+## Concurrent sessions (workspace norm)
+
+Multiple agent sessions share the `CroftC/` workspace. Do multi-turn work in a dedicated
+worktree — `git -C croft-pwa worktree add ../worktrees/croft-pwa/<slug> -b claude/<slug>` — never in
+this checkout (peer sessions stage with `git add -A`; loose files get swept into unrelated
+commits). Contested surfaces here — claim in `CroftC/.coordination/claims/` before
+touching: **landing on `main`** (it is the CI reference implementation — `docs/CI.md` changes ripple workspace-wide). Full protocol and the reasons behind it: `CroftC/.claude/COORDINATION.md`.
