@@ -16,11 +16,15 @@ together.
   aligned on paper while `view` and `fun` ran 1.62.0 against everyone else's 1.61.1
   (found 2026-08-26). A newer resolution can also need a browser build that is not in
   the shared cache, which fails on first run or misses in CI.
-- **`overrides: { "playwright-core": "1.61.1" }`** wherever `@axe-core/playwright` is
-  also present. *Why:* axe-core pulls its own `playwright-core`, which npm hoists to the
-  newest satisfying version while `@playwright/test` nests the matching one — two copies
-  whose `Page` types are incompatible under `exactOptionalPropertyTypes`, breaking
-  typecheck. The override forces a single copy.
+- **`overrides: { "playwright-core": "1.61.1" }`** — **required** as soon as a repo's
+  lockfile resolves more than one `playwright-core` (audit check 15 flags that), and
+  worth adding **preventively** in any repo carrying `@axe-core/playwright`, which is
+  what produces the duplicate. Carried today by `bluebird`, `fun`, and `view` — the three
+  where it actually appeared; `croft-pwa` and `arecipe` have axe-core but currently
+  resolve a single copy, so they are compliant without it. *Why:* axe-core pulls its own
+  `playwright-core`, which npm hoists to the newest satisfying version while
+  `@playwright/test` nests the matching one — two copies whose `Page` types are
+  incompatible under `exactOptionalPropertyTypes`, breaking typecheck.
 - *Why one version at all:* the two original cohorts (1.49.1/1.61.1) existed by accident
   — drift means a chassis fix or gotcha learned in one repo silently doesn't apply in
   another.
