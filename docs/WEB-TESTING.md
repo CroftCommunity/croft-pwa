@@ -19,7 +19,14 @@ together.
   (found 2026-08-26). A newer resolution can also need a browser build that is not in
   the shared cache, which fails on first run or misses in CI.
 - **An `overrides` entry pinning `playwright-core` to the resolved version above** —
-  **required** as soon as a repo's
+  required only when **both** are true: the lockfile resolves **two copies** AND the repo
+  **typechecks** (the failure is a TS error, so a repo with no `tsc` step cannot hit it).
+  *Not* triggered by axe-core's mere presence: it declares `playwright-core` as a **peer**
+  dependency (`>= 1.0.0`) with no direct dependency, so npm satisfies it with the copy
+  already present. Two copies arise from a version *mismatch* — typically downgrading
+  `@playwright/test` while a newer `playwright-core` is already hoisted to satisfy that
+  peer range, which is what happened in `view` and `fun`. Do not add it defensively: an
+  unnecessary override pins a transitive dependency forever. It was
   lockfile resolves more than one `playwright-core` (audit check 15 flags that), and
   worth adding **preventively** in any repo carrying `@axe-core/playwright`, which is
   what produces the duplicate. Carried today by `bluebird`, `fun`, and `view` — the three
