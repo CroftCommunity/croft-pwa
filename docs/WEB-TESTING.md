@@ -8,10 +8,22 @@ together.
 
 ## The stack (canonical versions)
 
-- **`@playwright/test` `^1.61.1`** + **`@axe-core/playwright` `^4.12.1`** — the audit
-  NOTEs version drift across repos. *Why one version:* two cohorts (1.49.1/1.61.1)
-  existed by accident, not choice — drift means a chassis fix or gotcha learned in one
-  repo silently doesn't apply in another.
+- **`@playwright/test`: range `^1.61.1`, resolved `1.61.1`** + **`@axe-core/playwright`
+  `^4.12.1`**. **The range is the policy; the lockfile is the pin — and the audit checks
+  the RESOLVED version, not the declared range.** *Why both:* a bare `^1.61.1` resolves
+  to whatever is newest today (1.62.1 at time of writing), so every repo can declare
+  compliance and still run a different Playwright than its siblings — the estate looked
+  aligned on paper while `view` and `fun` ran 1.62.0 against everyone else's 1.61.1
+  (found 2026-08-26). A newer resolution can also need a browser build that is not in
+  the shared cache, which fails on first run or misses in CI.
+- **`overrides: { "playwright-core": "1.61.1" }`** wherever `@axe-core/playwright` is
+  also present. *Why:* axe-core pulls its own `playwright-core`, which npm hoists to the
+  newest satisfying version while `@playwright/test` nests the matching one — two copies
+  whose `Page` types are incompatible under `exactOptionalPropertyTypes`, breaking
+  typecheck. The override forces a single copy.
+- *Why one version at all:* the two original cohorts (1.49.1/1.61.1) existed by accident
+  — drift means a chassis fix or gotcha learned in one repo silently doesn't apply in
+  another.
 - **Chromium-only in CI** (decision 2026-08-07, recorded in `CroftC/.claude/CI-PATTERN.md`):
   the mobile-fit specs test layout width, not engine differences. `fun`'s
   `mobile-webkit` project (real WebKit + touch) is the deliberate exception, kept
