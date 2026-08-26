@@ -3,7 +3,7 @@
 A Croft PWA treats the user's AT Protocol data server (PDS) as the backend: the
 user owns their records, and the app is one client among many. There is no
 server of ours in the middle. This is the substrate the whole family is built
-on; skylite is the deepest reference implementation. (Workspace-wide OAuth prior art +
+on; bluebird (formerly skylite) is the deepest reference implementation. (Workspace-wide OAuth prior art +
 choice criteria: `CroftC/.claude/DECISIONS.md` § Prior-art router.)
 
 ## The read path (shipped here)
@@ -47,7 +47,7 @@ directly from an arbitrary PDS needs a header-level CSP or a per-host relaxation
 
 ## Sealed box — privacy in public (shipped)
 
-`src/crypto/sealedbox.ts` (ported from skylite): a record can live in a public
+`src/crypto/sealedbox.ts` (ported from bluebird, then named skylite): a record can live in a public
 repo yet stay private — seal it to a recipient's **public** key, and only the
 matching **private** key opens it. Ephemeral ECDH(P-256) → HKDF-SHA256 →
 AES-256-GCM, all WebCrypto, no dependencies. A fresh ephemeral per message means
@@ -136,7 +136,7 @@ demonstrated live on `/atproto.html`.
 - **Mirror mainline** where possible (the note is `text` + `createdAt`, like a
   post) so records stay portable to other clients.
 
-## Deliberately staged (skylite is the reference)
+## Deliberately staged (bluebird is the reference)
 
 - The **WebAuthn-PRF vault path** (passkey/biometric key-at-rest) and a
   **persisted, vault-wrapped session** across reloads.

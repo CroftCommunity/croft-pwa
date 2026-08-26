@@ -36,13 +36,13 @@ The chassis in this repo is the template. The load-bearing standards:
 The atproto/PDA integration standard (OAuth with PKCE + PAR + DPoP, public
 repo reads, custom lexicons, client-side sealed-box encryption) is SHIPPED (`docs/ATPROTO.md` — OAuth sign-in, DPoP writes, vault). Before adopting an
 OAuth approach anywhere, grep `CroftC/.claude/DECISIONS.md` § Prior-art router — the
-pick is the owner's call; [skylite](https://github.com/CroftCommunity/skylite) remains the deeper reference
+pick is the owner's call; [bluebird](https://github.com/CroftCommunity/bluebird) (formerly skylite) remains the deeper reference
 implementation to read.
 
 ## Provenance
 
 This repo distills conventions proven in two working Croft PWAs — arecipe (the
-TDD working method and brand-token discipline) and skylite (the atproto/PDA
+TDD working method and brand-token discipline) and bluebird/skylite (the atproto/PDA
 stack and provenance discipline) — and supersedes the older, generic
 `peadoubleueh` notes. The discovery corpus's "tectonic" palette
 (`discovery/beta/socialization/visual-identity-and-the-progressive-depth-website.md`)
