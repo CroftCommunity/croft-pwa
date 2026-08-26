@@ -2,8 +2,9 @@
 
 **This file is canonical** for how every surface in the workspace is made and kept
 accessible. croft-pwa is the home because it is the reference implementation (as for
-`CI.md` and `WEB-TESTING.md`), not because the rules are croft-pwa's. Workspace index:
-`CroftC/.claude/ACCESSIBILITY.md`.
+`CI.md` and `WEB-TESTING.md`), not because the rules are croft-pwa's. The workspace
+router table in `CroftC/.claude/CLAUDE.md` points here directly — there is no index
+doc in between.
 
 This standard was **extracted, not invented**: six repos independently arrived at
 axe-in-both-themes, and the differences between their six versions are what the rules
@@ -127,7 +128,28 @@ of that.
 
 ## Maintenance
 
-Audit **check 21** enforces the two mechanical parts: every web-UI repo has an axe gate,
-and the gate is hermetic. It cannot check the manual floor, the population rule, or
-whether an exclusion is justified — those are review, stated here so the gap is known
-rather than assumed covered. Refine rule and why together, per `CroftC/.claude/PATTERN.md`.
+Audit **check 21** enforces the two mechanical parts: every web-UI repo has an axe gate
+(FLAG), and its scan shows visible hermeticity (NOTE — advisory per `PATTERN.md`'s
+escalation rule, because inferring "does this page fetch?" is unreliable: croft-pwa
+resolves its PDS from a DID doc, so no host literal appears anywhere in its source).
+Hermeticity is satisfied by any of four forms — blocking cross-origin, a harness fetch
+shim, the spec stating its surface needs no network, or the repo declaring that once in
+its own docs.
+
+**The axe VERSION is part of the gate's definition.** A newer axe ships more rules, so
+two repos on different axe versions are not scanning to the same standard and a gate can
+be green only because its scanner is older. The pin is the lockfile, not the declared
+range — `^4.12.1` resolves 4.13.0 quite happily, which is how greetings_site and pdsview
+ended up off-standard while declaring the canonical version (2026-08-26). Check 15 reads
+the resolved version; the canonical number lives in `WEB-TESTING.md` with the other
+toolchain pins.
+
+Check 21 cannot see the manual floor, the population rule, or whether an exclusion is
+justified — those are **review, not script**, stated here so the gap is known rather than
+assumed covered. Refine rule and why together, per `CroftC/.claude/PATTERN.md`.
+
+*This file is Tier 3 and is pointed at DIRECTLY from the workspace router table in
+`CroftC/.claude/CLAUDE.md`. It deliberately has no `.claude/` index doc: one existed
+briefly and measured 85% restatement of this file, which is a second edition rather than
+a route. An index earns its place only when it holds cross-repo state no single repo can
+own (a compliance matrix, a version pin); explanation belongs here, once.*

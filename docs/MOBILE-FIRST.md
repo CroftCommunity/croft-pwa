@@ -2,7 +2,7 @@
 
 **This file is canonical** for how web surfaces lay out and behave on a phone. croft-pwa
 is the home because it is the reference implementation (as for `CI.md`,
-`WEB-TESTING.md`, `ACCESSIBILITY.md`). Workspace index: `CroftC/.claude/MOBILE-FIRST.md`.
+`WEB-TESTING.md`, `ACCESSIBILITY.md`). Routed to directly from the workspace router table in `CroftC/.claude/CLAUDE.md`.
 
 The premise, which is not negotiable and is the reason this is a dimension rather than a
 preference: **a phone is the common case, not a follow-up.** Design and gate for the
@@ -74,6 +74,25 @@ URL, and an 8-deep reply chain. Copy the shape, not just the assertion.
 controls (icon-only ones especially: the fix is padding, not a bigger glyph), including
 one control per chrome region — toolbar, bottom nav, icon button, segmented control.
 
+**The inline exception is part of the criterion, not a loophole.** WCAG 2.5.5 exempts a
+target that is *"in a sentence or block of text"* — a link inside a paragraph or a footer
+line cannot be padded to 44px without breaking the text flow it lives in. A gate that
+ignores this fails on ordinary prose links, and a gate that fails on correct markup gets
+loosened or muted, which costs more than it ever caught. *Recorded: pdsview's first run
+of this check flagged its two footer links (55×22, 122×22) — the check was wrong, not the
+footer (2026-08-26).* Implement the exemption rather than working around it:
+
+```js
+// An <a> sitting inline in a text flow is exempt; a standalone control is not.
+const inlineInText = (el) =>
+  el.tagName === 'A' &&
+  (el.parentElement?.textContent ?? '').trim().length > (el.textContent ?? '').trim().length;
+```
+
+Buttons, icon buttons and nav links whose anchor is the sole content of its container are
+**not** exempt — they are standalone targets and the floor applies. Inline links stay a
+manual-review judgement: exempt from the gate is not the same as comfortable to tap.
+
 *Recorded, because this is a corrected drift:* croft-pwa's and view's design docs said
 "≥40px" while arecipe's and fun's **tests** asserted 44. 40 corresponds to no WCAG
 success criterion — it was a house number that spread by copying prose. The owner
@@ -113,4 +132,15 @@ Audit **check 22** enforces the mechanical parts: every web-UI repo has a mobile
 gate; a repo with `overflow-x: hidden|clip` on `html`/`body` does not rely on a
 scrollWidth check; and no doc cites a tap-target floor other than 44. Layout quality,
 thumb reach and fixture provocation are review, not script — stated so the gap is known.
-Refine rule and why together, per `CroftC/.claude/PATTERN.md`.
+
+**The tap-floor number has exactly one home: this file.** Change it here, then the audit
+script's `TAP_FLOOR` constant, then repo prose — the audit is what makes any other copy
+detectable. (An earlier draft said the number lived both here and in a `.claude/` index,
+which is two homes and therefore no home; that index is gone.) Refine rule and why
+together, per `CroftC/.claude/PATTERN.md`.
+
+*This file is Tier 3 and is pointed at DIRECTLY from the workspace router table in
+`CroftC/.claude/CLAUDE.md`. It deliberately has no `.claude/` index doc: one existed
+briefly and measured 86% restatement of this file — the worst compression ratio in the
+funnel, because prose this paraphrasable invites a summary that becomes a second copy.
+An index earns its place only when it holds cross-repo state no single repo can own.*
