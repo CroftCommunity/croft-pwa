@@ -75,7 +75,8 @@ CI is immune (it never reuses a server).
   back button). No client router, no focus-trapping overlays — inline reveals
   and transient toasts only.
 - **Mobile-first, tap-first.** `tests/e2e/mobile-fit.spec.ts` guards horizontal
-  overflow at 320/360/390px — run it after any layout change. Touch targets ≥40px.
+  overflow at 320/360/390px — run it after any layout change. Touch targets ≥44px
+  (WCAG 2.5.5; the workspace floor — `CroftC/.claude/MOBILE-FIRST.md`).
 - **Fail loud, degrade soft in the right places.** A programming error throws
   (a missing `#app` is a bug). A denied cosmetic capability (storage in private
   mode) degrades to a default rather than bricking the page.

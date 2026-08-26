@@ -59,5 +59,6 @@ unit-tested (`tests/unit/theme.test.ts`).
 **Pages, not modals.** Every surface is its own document; navigation is real
 links (native back button). No client router, no focus-trapping overlays — only
 inline reveals and transient toasts. Mobile-first, single column below 40rem;
-tabs move to a thumb-reachable bottom bar on phones. Touch targets ≥40px.
+tabs move to a thumb-reachable bottom bar on phones. Touch targets ≥44px (WCAG
+2.5.5 — the workspace floor; see `MOBILE-FIRST.md`, which this repo owns).
 Empty states are invitations with a next step (a dashed panel), never a blank box.
