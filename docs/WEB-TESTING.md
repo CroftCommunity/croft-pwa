@@ -8,15 +8,18 @@ together.
 
 ## The stack (canonical versions)
 
-- **`@playwright/test`: range `^1.61.1`, resolved `1.61.1`** + **`@axe-core/playwright`
-  `^4.12.1`**. **The range is the policy; the lockfile is the pin — and the audit checks
-  the RESOLVED version, not the declared range.** *Why both:* a bare `^1.61.1` resolves
+- **Pinned versions live in one place: `CroftC/.claude/WEB-TESTING.md` § The shape.**
+  Do not restate the numbers here — this doc holds the reasoning, that line holds the
+  values (and `bin/workspace-audit.sh` mirrors them as constants). **The range is the
+  policy; the lockfile is the pin — and the audit checks the RESOLVED version, not the
+  declared range.** *Why both:* a bare caret range resolves
   to whatever is newest today (1.62.1 at time of writing), so every repo can declare
   compliance and still run a different Playwright than its siblings — the estate looked
   aligned on paper while `view` and `fun` ran 1.62.0 against everyone else's 1.61.1
   (found 2026-08-26). A newer resolution can also need a browser build that is not in
   the shared cache, which fails on first run or misses in CI.
-- **`overrides: { "playwright-core": "1.61.1" }`** — **required** as soon as a repo's
+- **An `overrides` entry pinning `playwright-core` to the resolved version above** —
+  **required** as soon as a repo's
   lockfile resolves more than one `playwright-core` (audit check 15 flags that), and
   worth adding **preventively** in any repo carrying `@axe-core/playwright`, which is
   what produces the duplicate. Carried today by `bluebird`, `fun`, and `view` — the three
