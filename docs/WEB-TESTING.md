@@ -25,16 +25,11 @@ together.
   dependency (`>= 1.0.0`) with no direct dependency, so npm satisfies it with the copy
   already present. Two copies arise from a version *mismatch* — typically downgrading
   `@playwright/test` while a newer `playwright-core` is already hoisted to satisfy that
-  peer range, which is what happened in `view` and `fun`. Do not add it defensively: an
-  unnecessary override pins a transitive dependency forever. It was
-  lockfile resolves more than one `playwright-core` (audit check 15 flags that), and
-  worth adding **preventively** in any repo carrying `@axe-core/playwright`, which is
-  what produces the duplicate. Carried today by `bluebird`, `fun`, and `view` — the three
-  where it actually appeared; `croft-pwa` and `arecipe` have axe-core but currently
-  resolve a single copy, so they are compliant without it. *Why:* axe-core pulls its own
-  `playwright-core`, which npm hoists to the newest satisfying version while
-  `@playwright/test` nests the matching one — two copies whose `Page` types are
-  incompatible under `exactOptionalPropertyTypes`, breaking typecheck.
+  peer range, which is what happened in `view` and `fun` (both carry the override, as
+  does `bluebird`). Do not add it defensively: an unnecessary override pins a transitive
+  dependency forever. When the two conditions do hold, the two copies' `Page` types are
+  incompatible under `exactOptionalPropertyTypes` and typecheck breaks.
+
 - *Why one version at all:* the two original cohorts (1.49.1/1.61.1) existed by accident
   — drift means a chassis fix or gotcha learned in one repo silently doesn't apply in
   another.
