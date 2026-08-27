@@ -98,6 +98,17 @@ specifics differ; the pattern is recorded in the croft two-device runbook).
   clicked" are two different claims — assert the one the user experiences.
 - **Readiness flags over sleeps** — the app publishes an explicit ready signal the
   harness waits on; racing async states with timeouts is where flakes live.
+- **If the DOM is still changing, the READ must be one round-trip.** Waiting for a
+  shape atomically and then asserting it non-atomically leaves the race exactly
+  where it was, only narrower. Measured 2026-08-26 in forage: a `waitForFunction`
+  correctly checked head/mine/theirs together *inside the page*, then three separate
+  `.count()` calls — three round-trips — asserted it. The thread kept repainting;
+  the first assert passed and the second read `0`. The fix is one `page.evaluate`
+  returning a snapshot object, with every assertion made against that one value.
+  Diagnostics distinguished it from a load hang: **zero outstanding requests,
+  `readyState: complete`** — nothing was loading, the app was repainting after
+  settle. *"Waiting harder cannot fix it" is right and understated — a better wait
+  cannot fix it either.*
 - **Loud skips, never silent** — an environment that can't run a family prints the
   skip per suite; a silently-skipped browser suite is how 418 "gating" tests turn out
   to run only on one laptop (measured, 2026-08-07 — `docs/CI.md`).
