@@ -228,7 +228,7 @@ main {
   color: var(--ink-muted);
   text-decoration: none;
   white-space: nowrap;
-  min-height: 40px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
 }
