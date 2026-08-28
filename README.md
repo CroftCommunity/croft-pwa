@@ -51,6 +51,13 @@ failure it prevents, plus a checklist for auditing a repo against it. This repo 
 the reference implementation, so `.github/workflows/ci.yml` and that document are
 meant to be read together.
 
+[`docs/PWA-INSTALL.md`](./docs/PWA-INSTALL.md) covers what an installed PWA does
+between the tap and the first frame — manifest, icons, and the three different
+things people call "the splash screen". The short version: **the splash you
+actually control is a page you write, not a manifest field.** It also records
+two gaps in this repo's own manifest, named so they are not mistaken for
+decisions.
+
 ## Starting a new Croft PWA from this
 
 The chassis is the template. Copy `build.mjs`, `tokens.css`, `styles.css`,

@@ -3,6 +3,7 @@
 ## Identity (workspace architecture)
 
 **Scope:** The Croft standards/meta-site (itself a PWA) and the workspace CI reference implementation (`docs/CI.md`); documented port of the atproto OAuth client.
+Install/launch behaviour — manifest, icons, and the splash screen that is a page rather than a manifest field — is `docs/PWA-INSTALL.md`.
 **Not this repo:** the OAuth origin (skylite is the deeper reference — `docs/ATPROTO.md`).
 **Provides:** CI reference, standards pages. **Consumes:** skylite OAuth lineage.
 Card + altitudes: `CroftC/.claude/ARCHITECTURE.md`.
