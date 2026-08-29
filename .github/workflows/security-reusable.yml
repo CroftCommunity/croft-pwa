@@ -236,6 +236,13 @@ jobs:
       # fetched a main that did not have the script yet and died on a missing
       # directory (observed 2026-08-29). Pinning to the workflow's own SHA makes
       # script/workflow skew impossible for every caller, tag-pinned ones included.
+      - name: DEBUG which contexts carry the reusable workflow's own ref
+        run: |
+          echo "job_workflow_sha=[${{ github.job_workflow_sha }}]"
+          echo "workflow_ref=[${{ github.workflow_ref }}]"
+          echo "workflow_sha=[${{ github.workflow_sha }}]"
+          echo "repository=[${{ github.repository }}]"
+
       - name: Fetch the gate script
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
