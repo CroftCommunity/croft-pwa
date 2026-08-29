@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; img-src 'self' data:; font-src 'self'; style-src 'self'; manifest-src 'self'; connect-src 'self' https://public.api.bsky.app https://plc.directory https://bsky.social https://*.host.bsky.network; worker-src 'self'; script-src 'self' 'sha256-/SMapJxJi1eGjXM9ZnSWlFNcbyiDy3McaSdqS3/hkhM='" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#ab5330" />
+    <meta name="description" content="PWA mechanics — CSP, install, offline, and logging." />
+    <title>Croft PWA — PWA mechanics</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <script>(function(){try{var t=localStorage.getItem('croft-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <link rel="stylesheet" href="styles.css?v=v0%200.1.0%2B87ff8ca" integrity="sha384-rF8dq3qzxofC0TT4i7qqiN4z5CwJEP06ZumJ87QEFtNQ3ZX2cLjl+29SVcIitx1z" crossorigin="anonymous" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="assets/pwa-TDZXLMEB.js" integrity="sha384-cJnorZ9XMO/YOM++v6plYGNWF6s1H2Q7OJfN1CJ05cACcVMtPxrc1zeoWNHnvaQ6" crossorigin="anonymous"></script>
+  </body>
+</html>
