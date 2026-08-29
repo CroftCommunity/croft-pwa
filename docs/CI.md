@@ -336,3 +336,40 @@ libraries they need. Cache what you can and bound what you cannot.
 Worth being precise about which half is which: it is easy to look at a stalled
 `playwright install` and conclude the browsers are not cached, when they are and
 the apt call underneath is the uncacheable part.
+
+### When the suite outgrows the runner: shard it, and build once
+
+Measured in `fun` on 2026-08-29, the day its browser suite started failing cheap,
+unrelated tests on `page.goto` timeouts — the leg saturating, not any test being
+wrong. Two facts decided the remedy:
+
+- **A job's fixed cost is most of a job.** On the last green run the mobile-WebKit job
+  spent ~25 s on checkout and toolchains, **110 s** downloading the browser, and then
+  279 s on tests — and one to two minutes of that "test" step was Playwright's
+  `webServer` building every crate's wasm before the first test ran. Sharding a suite
+  without moving the build pays that build per shard: three shards would have saved
+  about two of seven minutes and tripled the runner minutes.
+- **Playwright's `--shard=i/n` splits the ordered test list into contiguous chunks**, so
+  a shard is a run of files in alphabetical order. Measure the chunks before choosing
+  `n` (`--shard=i/n --list`, joined to per-test durations); `fun`'s three came out
+  79 s / 54 s / 34 s on the slow engine — lopsided, and every one far under the old leg.
+
+The shape that came out: a `wasm` job builds the modules once and uploads them; the
+shards (`project × shard`, `fail-fast: false`, the job name carrying both) download
+them and tell the `webServer` to skip the build. **Make the missing artifact fatal**
+under CI — `fun`'s `build.mjs` only *noted* a missing module, which locally is right
+(a developer on one game need not build the others) and on a shard is a shelf with
+no engines passing whatever it can. That is the "green over nothing" shape this doc
+keeps meeting.
+
+Two things it is not. It is not a longer per-test timeout — `fun`'s workflow records
+why: a timeout raised to fix the symptom buried a real hang. And it is not a separate
+smoke *job*: a quick `@smoke` subset is worth having as a **command** for the human
+(`npm run smoke`, one engine, every wiring test and the a11y matrix, about a minute),
+but a smoke job that passes beside a failing shard is a green tick that means less
+than what is next to it.
+
+And the per-test convention that came with it: **a browser test over ~20 s is a
+smell**, and the fix is a seam, not a timeout. A test that plays a game asserts rules
+and wiring, not pacing; `fun`'s games read `?fast=1` and collapse the engine's beats
+to a frame, and a full-game test went from 72 s per engine to 5 s.
