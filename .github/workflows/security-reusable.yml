@@ -33,6 +33,36 @@ on:
         description: "Pinned gitleaks release, without the leading v."
         type: string
         default: "8.30.1"
+      osv-scanner-version:
+        description: >-
+          Pinned osv-scanner release, without the leading v. This is the version the
+          gate's classifier was VALIDATED against (2026-08-29, four named cases in
+          the rollout plan's Phase 2). Bumping it means re-running those four, not
+          just watching CI stay green — the classifier reads osv-scanner's JSON
+          schema, and `dependency_groups` going missing would silently turn every
+          npm dev-only finding into a block.
+        type: string
+        default: "2.3.5"
+      deps-enforce:
+        description: >-
+          Whether a blocking dependency finding fails the build. Default true, and
+          that default is MEASURED, not brave: the gate was run across all 18 repos
+          on 2026-08-29 and reported zero blocking findings in every one. The staged
+          "advisory first" rollout the plan sketched was insurance against a backlog
+          that turned out not to exist, and an advisory gate nobody has to fix is
+          how a gate becomes decoration.
+        type: boolean
+        default: true
+      advisory-paths:
+        description: >-
+          Newline-separated repo-relative prefixes whose findings are reported but
+          never block, because nothing under them is shipped — frozen spikes, proofs,
+          archives. This is a claim about what the repo PUBLISHES, so it belongs with
+          the caller rather than in the shared config. It is load-bearing where it is
+          used: discovery reports 0 blocking findings with its three prefixes set and
+          215 without them, all in research code that ships nothing.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -54,8 +84,14 @@ jobs:
         run: |
           set -euo pipefail
           V="${{ inputs.gitleaks-version }}"
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz" \
-            | tar -xz gitleaks
+          B="https://github.com/gitleaks/gitleaks/releases/download/v${V}"
+          curl -sSfL -o gitleaks.tar.gz "${B}/gitleaks_${V}_linux_x64.tar.gz"
+          curl -sSfL -o gitleaks_checksums.txt "${B}/gitleaks_${V}_checksums.txt"
+          # A supply-chain gate that installs an unverified binary is not one. The
+          # pipe-straight-to-tar form this replaces could not check anything: the
+          # bytes were consumed before they could be hashed.
+          grep " gitleaks_${V}_linux_x64.tar.gz\$" gitleaks_checksums.txt | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
           ./gitleaks version
 
       # The workspace baseline. Every allowlist below was derived from a MEASURED false
@@ -174,3 +210,62 @@ jobs:
             echo "::error title=Secret detected::gitleaks found a candidate credential. Rule: CroftC/.claude/SUPPLY-CHAIN.md rule 1 — secrets are scanned everywhere, public and private, and the gate blocks. If this is a deliberate fixture, add it to .gitleaks-extra.toml BY PATH with a reason. Never disable the scan."
           fi
           exit "$rc"
+
+  deps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The gate script lives beside this workflow but does not travel with it — a
+      # reusable workflow checks out the CALLER's repo, not its own. So we fetch it.
+      # `ref: main` and not github.workflow_sha: in a reusable workflow that context
+      # documents as the CALLER's commit, which is the wrong repo entirely. Every
+      # caller today pins `@main`, so main is the matching ref; a caller that later
+      # pins a tag would get the workflow at that tag and the script at main, and
+      # that skew is the reason this comment exists.
+      - name: Fetch the gate script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: CroftCommunity/croft-pwa
+          ref: main
+          path: .security-tooling
+          sparse-checkout: .github/scripts
+
+      # The classifier's own tests run HERE, in every caller, on every run — not in
+      # croft-pwa's vitest suite. Most callers have no Node toolchain, so a suite
+      # only croft-pwa runs is a check the other seventeen never invoke
+      # (VERIFICATION.md, "a check nothing invokes"). Running them first means a
+      # broken classifier fails loudly instead of waving findings through.
+      - name: Test the classifier
+        working-directory: .security-tooling/.github/scripts
+        run: python3 test_dep_gate.py
+
+      - name: Install osv-scanner (pinned, checksum-verified)
+        run: |
+          set -euo pipefail
+          V="${{ inputs.osv-scanner-version }}"
+          B="https://github.com/google/osv-scanner/releases/download/v${V}"
+          curl -sSfL -o osv-scanner "${B}/osv-scanner_linux_amd64"
+          curl -sSfL -o SHA256SUMS "${B}/osv-scanner_SHA256SUMS"
+          # A supply-chain gate that installs an unverified binary is not one.
+          grep " osv-scanner_linux_amd64$" SHA256SUMS | sed 's/osv-scanner_linux_amd64/osv-scanner/' | sha256sum -c -
+          chmod +x osv-scanner
+          ./osv-scanner --version
+
+      - name: Scan dependencies
+        env:
+          ADVISORY_PATHS: ${{ inputs.advisory-paths }}
+          ENFORCE: ${{ inputs.deps-enforce }}
+        run: |
+          set -euo pipefail
+          args=()
+          while IFS= read -r p; do
+            if [ -n "$p" ]; then args+=(--advisory-path "$p"); fi
+          done <<< "$ADVISORY_PATHS"
+          # An `if` and not `[ x = y ] && args+=(...)`: under `set -e` the && form
+          # exits the step with status 1 the moment enforcement is OFF, which turns
+          # "advisory mode" into a hard failure and looks exactly like a real finding.
+          if [ "$ENFORCE" = "true" ]; then args+=(--enforce); fi
+          python3 .security-tooling/.github/scripts/dep_gate.py \
+            --root . --scanner "$PWD/osv-scanner" "${args[@]}"

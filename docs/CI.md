@@ -275,6 +275,58 @@ A deploy that *rebuilds* rather than consuming an artifact — as this repo's do
 is dispatch-safe by construction, because it has no step conditioned on the event
 name at all. That is a quiet argument for the simpler deploy.
 
+## 9. The security gates come from one shared workflow, not eighteen copies
+
+`.github/workflows/security-reusable.yml` in this repo is called by every repo in
+the workspace. A caller writes eighteen lines and gets both gates:
+
+```yaml
+jobs:
+  security:
+    uses: CroftCommunity/croft-pwa/.github/workflows/security-reusable.yml@main
+```
+
+**Why one file.** Rule 6 wants the toolchain pinned in one place. Eighteen copies
+of `gitleaks 8.30.1` is eighteen places to forget when it moves — and the scanner
+version is not cosmetic: the dependency gate's classifier reads osv-scanner's JSON
+schema, so a version bump can change what the gate *means* while CI stays green.
+Five repos here have no CI at all, so per-repo workflows would mean authoring five
+files for repos with nothing else to run.
+
+**Why the host is public.** `croft-stack` and `CroftC` are private — exactly the
+repos GitHub's own free secret scanning does not reach, and the reason this gate
+exists rather than relying on it (GitHub *alerts*; a gate *blocks*). Verified
+2026-08-29: `actions/permissions/access` returns HTTP 422 *"Access policy only
+applies to internal and private repositories"*, so a public host is callable from
+everywhere, private callers included.
+
+**Two jobs, two very different questions.**
+
+- `secrets` — gitleaks over the **commit range**, not the head commit. Measured
+  2026-08-29 with a token added in one commit and reverted in the next:
+  `--log-opts="HEAD~1..HEAD"` scans 0 commits and finds nothing; `BASE..HEAD`
+  finds it. The head-only form is what a naive gate writes, and the reverted
+  secret is still in the history it skipped.
+- `deps` — osv-scanner over every tracked lockfile, then **rule 5 rung 2**: is the
+  vulnerable package on the production path of a shipped artifact? croft's Android
+  scan reports 43 advisories, 19 rated High, and zero of them reach the APK — they
+  are all in AGP's `_internal-unified-test-platform-*` configurations. A
+  severity-only gate blocks a client release on netty CVEs in the emulator-control
+  plugin. The classifier and its tests live in `.github/scripts/`, and **the tests
+  run inside the workflow**, in every caller, on every run: most callers have no
+  Node toolchain, so a suite only this repo runs is a check the other seventeen
+  never invoke.
+
+**Extending, never overriding.** A repo with extra secret allowlists adds
+`.gitleaks-extra.toml`; the workflow *appends* it to the workspace baseline. A repo
+that publishes nothing from a subtree — frozen spikes, proofs — passes
+`advisory-paths`, and findings there are reported without blocking. Neither can
+switch a base rule off. Both are load-bearing where used: `discovery` reports 0
+blocking findings with its three prefixes and 215 without them.
+
+**Both binaries are checksum-verified** against the release's own SHA file. A
+supply-chain gate that installs an unverified binary is not one.
+
 ## Auditing another repo against this
 
 - [ ] `on:` includes `pull_request`
@@ -291,6 +343,8 @@ name at all. That is a quiet argument for the simpler deploy.
 - [ ] every job has a `timeout-minutes`
 - [ ] `workflow_dispatch` is present, and publish steps are conditioned
       `!= 'pull_request'` so a dispatch can actually deploy
+- [ ] the shared security workflow is called (rule 9), and the caller sets
+      `advisory-paths` if any subtree of the repo ships nothing
 - [ ] **read the count, not the tick.** A gate that ran zero tests is green.
       Confirm the log states how much it ran — `Running 418 tests using 2
       workers` → `415 passed` — because a green tick over nothing looks exactly

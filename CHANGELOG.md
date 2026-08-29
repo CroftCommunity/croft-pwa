@@ -9,6 +9,13 @@ Started 2026-08-29; earlier history is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 `docs/CI.md` rule 9 — the shared security workflow, and the dependency
+  gate beside the secret one. The gate applies SUPPLY-CHAIN rule 5 rung 2 rather than
+  a severity threshold: croft's Android scan reports 43 advisories, 19 High, and none
+  of them reach the APK. Both scanner binaries are now checksum-verified.
+- 2026-08-29 `.github/workflows/security-reusable.yml` — the workspace secret-scanning
+  gate every repo calls. It scans the PR's commit range, not its head commit, because
+  a secret added and reverted inside one PR is invisible to the head-only form.
 - 2026-08-29 Relicensed MIT → AGPL-3.0, matching the rest of the workspace (owner decision).
 - 2026-08-29 Accessibility requirement 4: an axe exclusion must match something — a scope
   that matches nothing is a scan that silently grades a different page.
