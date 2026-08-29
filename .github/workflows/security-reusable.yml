@@ -85,13 +85,16 @@ jobs:
           set -euo pipefail
           V="${{ inputs.gitleaks-version }}"
           B="https://github.com/gitleaks/gitleaks/releases/download/v${V}"
-          curl -sSfL -o gitleaks.tar.gz "${B}/gitleaks_${V}_linux_x64.tar.gz"
-          curl -sSfL -o gitleaks_checksums.txt "${B}/gitleaks_${V}_checksums.txt"
+          # Download under the EXACT published filename: `sha256sum -c` reads the name
+          # out of the checksum line and opens that path, so renaming on the way in
+          # makes the check fail to find its own file. Observed 2026-08-29.
+          curl -sSfL -O "${B}/gitleaks_${V}_linux_x64.tar.gz"
+          curl -sSfL -O "${B}/gitleaks_${V}_checksums.txt"
           # A supply-chain gate that installs an unverified binary is not one. The
           # pipe-straight-to-tar form this replaces could not check anything: the
           # bytes were consumed before they could be hashed.
-          grep " gitleaks_${V}_linux_x64.tar.gz\$" gitleaks_checksums.txt | sha256sum -c -
-          tar -xzf gitleaks.tar.gz gitleaks
+          grep " gitleaks_${V}_linux_x64.tar.gz\$" "gitleaks_${V}_checksums.txt" | sha256sum -c -
+          tar -xzf "gitleaks_${V}_linux_x64.tar.gz" gitleaks
           ./gitleaks version
 
       # The workspace baseline. Every allowlist below was derived from a MEASURED false
@@ -218,17 +221,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The gate script lives beside this workflow but does not travel with it — a
-      # reusable workflow checks out the CALLER's repo, not its own. So we fetch it.
-      # `ref: main` and not github.workflow_sha: in a reusable workflow that context
-      # documents as the CALLER's commit, which is the wrong repo entirely. Every
-      # caller today pins `@main`, so main is the matching ref; a caller that later
-      # pins a tag would get the workflow at that tag and the script at main, and
-      # that skew is the reason this comment exists.
+      # reusable workflow checks out the CALLER's repo, not its own. So we fetch it,
+      # at `github.job_workflow_sha`: the commit of the REUSABLE workflow being run,
+      # which is the only context that means "the version of me the caller asked
+      # for". `github.workflow_sha` is the caller's commit — the wrong repo entirely
+      # — and a hardcoded `main` cannot even bootstrap: the first run of this job
+      # fetched a main that did not have the script yet and died on a missing
+      # directory (observed 2026-08-29). Pinning to the workflow's own SHA makes
+      # script/workflow skew impossible for every caller, tag-pinned ones included.
       - name: Fetch the gate script
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: CroftCommunity/croft-pwa
-          ref: main
+          ref: ${{ github.job_workflow_sha }}
           path: .security-tooling
           sparse-checkout: .github/scripts
 
@@ -246,10 +251,10 @@ jobs:
           set -euo pipefail
           V="${{ inputs.osv-scanner-version }}"
           B="https://github.com/google/osv-scanner/releases/download/v${V}"
-          curl -sSfL -o osv-scanner "${B}/osv-scanner_linux_amd64"
-          curl -sSfL -o SHA256SUMS "${B}/osv-scanner_SHA256SUMS"
-          # A supply-chain gate that installs an unverified binary is not one.
-          grep " osv-scanner_linux_amd64$" SHA256SUMS | sed 's/osv-scanner_linux_amd64/osv-scanner/' | sha256sum -c -
+          curl -sSfL -O "${B}/osv-scanner_linux_amd64"
+          curl -sSfL -O "${B}/osv-scanner_SHA256SUMS"
+          grep " osv-scanner_linux_amd64$" osv-scanner_SHA256SUMS | sha256sum -c -
+          mv osv-scanner_linux_amd64 osv-scanner
           chmod +x osv-scanner
           ./osv-scanner --version
 
