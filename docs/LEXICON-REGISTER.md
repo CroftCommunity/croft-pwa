@@ -11,8 +11,22 @@ Every entry answers **Holds**, **Why ours**, and **Ecosystem check** — the las
 existing types were actually opened and looked in.
 
 Namespace: `ing.croft.*` is the reverse of **croft.ing**, which the project controls.
-**Not yet published:** `_lexicon.croft.ing` has no TXT record (measured 2026-08-29 against
-`1.1.1.1`), so nothing outside this app can resolve these NSIDs.
+**Not yet published — and the reason is not what a first look suggests.** Measured
+2026-08-29 against Porkbun's authoritative nameservers:
+
+```
+_lexicon.croft.ing      ->  CNAME pixie.porkbun.com.
+_probe-xyz.croft.ing    ->  CNAME pixie.porkbun.com.     <- a name nobody created
+```
+
+The second line is the point: an invented name answers identically, so this is a
+**wildcard** — the registrar's parking default answering every undefined name under
+croft.ing — not a record sitting at `_lexicon`. A wildcard applies only where the queried
+name has no records of its own (RFC 1034 §4.3.3), so creating an explicit
+`_lexicon.croft.ing TXT` takes precedence and the parking answer stops applying there.
+**Nothing needs deleting**, and deleting the wildcard would change how the whole zone
+answers in order to fix one lookup. Until that TXT exists, nothing outside this app can
+resolve `ing.croft.*`. See `CroftC/.claude/LEXICONS.md` § 2.
 
 ---
 
@@ -50,8 +64,9 @@ rather than keeping a demo record type in a shipped namespace.
 
 ## Owed
 
-- **Publish the namespace** (`CroftC/.claude/LEXICONS.md` § 2). `_lexicon.croft.ing` has no
-  TXT record, so no other client can resolve `ing.croft.*`. The worked example, verified
+- **Publish the namespace** (`CroftC/.claude/LEXICONS.md` § 2) — one TXT record at
+  `_lexicon.croft.ing`, which takes precedence over the parking wildcard without removing
+  it. Until it exists, no other client can resolve `ing.croft.*`. The worked example, verified
   2026-08-29: `_lexicon.recipe.exchange` → `did:plc:4cx7…` → four
   `com.atproto.lexicon.schema` records whose rkeys are the NSIDs. This is croft.ing-wide
   work — `ing.croft.*` is minted in at least four repos — and a demo type is a poor reason
