@@ -12,3 +12,6 @@ dist/
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Python bytecode from .github/scripts (the dependency gate)
+__pycache__/

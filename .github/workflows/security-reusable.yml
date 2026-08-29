@@ -33,6 +33,36 @@ on:
         description: "Pinned gitleaks release, without the leading v."
         type: string
         default: "8.30.1"
+      osv-scanner-version:
+        description: >-
+          Pinned osv-scanner release, without the leading v. This is the version the
+          gate's classifier was VALIDATED against (2026-08-29, four named cases in
+          the rollout plan's Phase 2). Bumping it means re-running those four, not
+          just watching CI stay green — the classifier reads osv-scanner's JSON
+          schema, and `dependency_groups` going missing would silently turn every
+          npm dev-only finding into a block.
+        type: string
+        default: "2.3.5"
+      deps-enforce:
+        description: >-
+          Whether a blocking dependency finding fails the build. Default true, and
+          that default is MEASURED, not brave: the gate was run across all 18 repos
+          on 2026-08-29 and reported zero blocking findings in every one. The staged
+          "advisory first" rollout the plan sketched was insurance against a backlog
+          that turned out not to exist, and an advisory gate nobody has to fix is
+          how a gate becomes decoration.
+        type: boolean
+        default: true
+      advisory-paths:
+        description: >-
+          Newline-separated repo-relative prefixes whose findings are reported but
+          never block, because nothing under them is shipped — frozen spikes, proofs,
+          archives. This is a claim about what the repo PUBLISHES, so it belongs with
+          the caller rather than in the shared config. It is load-bearing where it is
+          used: discovery reports 0 blocking findings with its three prefixes set and
+          215 without them, all in research code that ships nothing.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -53,9 +83,25 @@ jobs:
       - name: Install gitleaks (pinned)
         run: |
           set -euo pipefail
+          # --retry is not politeness. The first CI run of this job died on
+          # `curl: (35) Recv failure: Connection reset by peer` fetching a GitHub
+          # release asset — a gate that goes red on a transient network blip gets
+          # disabled, and a disabled gate reads as coverage. --retry-all-errors is
+          # required for -f: without it curl only retries "transient" HTTP codes and
+          # not connection resets.
+          CURL="curl -sSfL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15"
           V="${{ inputs.gitleaks-version }}"
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz" \
-            | tar -xz gitleaks
+          B="https://github.com/gitleaks/gitleaks/releases/download/v${V}"
+          # Download under the EXACT published filename: `sha256sum -c` reads the name
+          # out of the checksum line and opens that path, so renaming on the way in
+          # makes the check fail to find its own file. Observed 2026-08-29.
+          $CURL -O "${B}/gitleaks_${V}_linux_x64.tar.gz"
+          $CURL -O "${B}/gitleaks_${V}_checksums.txt"
+          # A supply-chain gate that installs an unverified binary is not one. The
+          # pipe-straight-to-tar form this replaces could not check anything: the
+          # bytes were consumed before they could be hashed.
+          grep " gitleaks_${V}_linux_x64.tar.gz\$" "gitleaks_${V}_checksums.txt" | sha256sum -c -
+          tar -xzf "gitleaks_${V}_linux_x64.tar.gz" gitleaks
           ./gitleaks version
 
       # The workspace baseline. Every allowlist below was derived from a MEASURED false
@@ -174,3 +220,75 @@ jobs:
             echo "::error title=Secret detected::gitleaks found a candidate credential. Rule: CroftC/.claude/SUPPLY-CHAIN.md rule 1 — secrets are scanned everywhere, public and private, and the gate blocks. If this is a deliberate fixture, add it to .gitleaks-extra.toml BY PATH with a reason. Never disable the scan."
           fi
           exit "$rc"
+
+  deps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The gate script lives beside this workflow but does not travel with it — a
+      # reusable workflow checks out the CALLER's repo, not its own. So we fetch it.
+      #
+      # `ref: main` is not laziness; it is what is left after measuring. GitHub
+      # documents `github.job_workflow_sha` as "the commit SHA for the reusable
+      # workflow file", which would be exactly right. Printed from a caller repo on
+      # runner 2.336.0 (2026-08-29) it is **empty**, and `github.workflow_ref` /
+      # `github.workflow_sha` are the CALLER's workflow and commit. No context
+      # carries this workflow's own ref, so there is nothing to pin to.
+      #
+      # Two consequences worth knowing rather than rediscovering:
+      #   - omitting `ref` does NOT fall back to this workflow's ref. actions/checkout
+      #     defaults to `github.ref` of the CURRENT repo, which silently works when
+      #     the caller happens to be croft-pwa and silently checks out an unrelated
+      #     default branch everywhere else — a green run in the host repo and a
+      #     missing directory in all seventeen others. Observed, in that order.
+      #   - a caller that pins this workflow to a tag would get the script from main.
+      #     Every caller pins `@main` today, so the two agree; if that changes, this
+      #     is the line that has to change with it.
+      - name: Fetch the gate script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: CroftCommunity/croft-pwa
+          ref: main
+          path: .security-tooling
+          sparse-checkout: .github/scripts
+
+      # The classifier's own tests run HERE, in every caller, on every run — not in
+      # croft-pwa's vitest suite. Most callers have no Node toolchain, so a suite
+      # only croft-pwa runs is a check the other seventeen never invoke
+      # (VERIFICATION.md, "a check nothing invokes"). Running them first means a
+      # broken classifier fails loudly instead of waving findings through.
+      - name: Test the classifier
+        working-directory: .security-tooling/.github/scripts
+        run: python3 test_dep_gate.py
+
+      - name: Install osv-scanner (pinned, checksum-verified)
+        run: |
+          set -euo pipefail
+          CURL="curl -sSfL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15"
+          V="${{ inputs.osv-scanner-version }}"
+          B="https://github.com/google/osv-scanner/releases/download/v${V}"
+          $CURL -O "${B}/osv-scanner_linux_amd64"
+          $CURL -O "${B}/osv-scanner_SHA256SUMS"
+          grep " osv-scanner_linux_amd64$" osv-scanner_SHA256SUMS | sha256sum -c -
+          mv osv-scanner_linux_amd64 osv-scanner
+          chmod +x osv-scanner
+          ./osv-scanner --version
+
+      - name: Scan dependencies
+        env:
+          ADVISORY_PATHS: ${{ inputs.advisory-paths }}
+          ENFORCE: ${{ inputs.deps-enforce }}
+        run: |
+          set -euo pipefail
+          args=()
+          while IFS= read -r p; do
+            if [ -n "$p" ]; then args+=(--advisory-path "$p"); fi
+          done <<< "$ADVISORY_PATHS"
+          # An `if` and not `[ x = y ] && args+=(...)`: under `set -e` the && form
+          # exits the step with status 1 the moment enforcement is OFF, which turns
+          # "advisory mode" into a hard failure and looks exactly like a real finding.
+          if [ "$ENFORCE" = "true" ]; then args+=(--enforce); fi
+          python3 .security-tooling/.github/scripts/dep_gate.py \
+            --root . --scanner "$PWD/osv-scanner" "${args[@]}"
