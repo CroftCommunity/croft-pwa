@@ -9,6 +9,9 @@ Started 2026-08-29; earlier history is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 The dependency gate reads `requirements.txt` too. It did not, and
+  discovery's one pinned Python build dependency was going unscanned — it carried
+  GHSA-5wmx-573v-2qwq (CVSS 7.5). An ecosystem nobody scans is not a clean one.
 - 2026-08-29 `docs/CI.md` rule 9 — the shared security workflow, and the dependency
   gate beside the secret one. The gate applies SUPPLY-CHAIN rule 5 rung 2 rather than
   a severity threshold: croft's Android scan reports 43 advisories, 19 High, and none
