@@ -117,6 +117,20 @@ jobs:
           description = "deliberate SSH test fixtures"
           targets = ["path"]
           paths = ['''(^|/)tests?/fixtures/id_ed25519''']
+
+          # The config files themselves. An allowlist that DOCUMENTS a false positive by
+          # quoting it re-creates that false positive in its own comments — observed
+          # 2026-08-29, when discovery's freshly-landed .gitleaks-extra.toml failed the
+          # gate on line 12 of its own rationale. Excluding the config is not a loophole:
+          # a real credential does not belong in a scanner config either, and anything
+          # pasted there is by definition already declared.
+          [[allowlists]]
+          description = "the gitleaks config files themselves"
+          targets = ["path"]
+          paths = [
+            '''(^|/)\.gitleaks\.toml$''',
+            '''(^|/)\.gitleaks-extra\.toml$''',
+          ]
           BASETOML
 
           # Per-repo extension: appended, never substituted. `[[allowlists]]` is an
