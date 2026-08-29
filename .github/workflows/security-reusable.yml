@@ -83,13 +83,20 @@ jobs:
       - name: Install gitleaks (pinned)
         run: |
           set -euo pipefail
+          # --retry is not politeness. The first CI run of this job died on
+          # `curl: (35) Recv failure: Connection reset by peer` fetching a GitHub
+          # release asset — a gate that goes red on a transient network blip gets
+          # disabled, and a disabled gate reads as coverage. --retry-all-errors is
+          # required for -f: without it curl only retries "transient" HTTP codes and
+          # not connection resets.
+          CURL="curl -sSfL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15"
           V="${{ inputs.gitleaks-version }}"
           B="https://github.com/gitleaks/gitleaks/releases/download/v${V}"
           # Download under the EXACT published filename: `sha256sum -c` reads the name
           # out of the checksum line and opens that path, so renaming on the way in
           # makes the check fail to find its own file. Observed 2026-08-29.
-          curl -sSfL -O "${B}/gitleaks_${V}_linux_x64.tar.gz"
-          curl -sSfL -O "${B}/gitleaks_${V}_checksums.txt"
+          $CURL -O "${B}/gitleaks_${V}_linux_x64.tar.gz"
+          $CURL -O "${B}/gitleaks_${V}_checksums.txt"
           # A supply-chain gate that installs an unverified binary is not one. The
           # pipe-straight-to-tar form this replaces could not check anything: the
           # bytes were consumed before they could be hashed.
@@ -249,10 +256,11 @@ jobs:
       - name: Install osv-scanner (pinned, checksum-verified)
         run: |
           set -euo pipefail
+          CURL="curl -sSfL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15"
           V="${{ inputs.osv-scanner-version }}"
           B="https://github.com/google/osv-scanner/releases/download/v${V}"
-          curl -sSfL -O "${B}/osv-scanner_linux_amd64"
-          curl -sSfL -O "${B}/osv-scanner_SHA256SUMS"
+          $CURL -O "${B}/osv-scanner_linux_amd64"
+          $CURL -O "${B}/osv-scanner_SHA256SUMS"
           grep " osv-scanner_linux_amd64$" osv-scanner_SHA256SUMS | sha256sum -c -
           mv osv-scanner_linux_amd64 osv-scanner
           chmod +x osv-scanner
