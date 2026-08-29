@@ -31,7 +31,7 @@ or skin**.
   underline links in prose, the CSS changed, and the exclusion was **deleted**. An
   exclusion is a parked decision, not a permanent carve-out.
 
-## Three soundness requirements, without which the gate is theatre
+## Four soundness requirements, without which the gate is theatre
 
 A green axe run only means something if it scanned the DOM a user actually gets. Each
 of these was learned by a suite reporting green over a real defect.
@@ -66,6 +66,35 @@ scanned its memory-backed surfaces and called the suite clean; production defaul
 the Bluesky lens view at `/`, which the suite never loaded. A live scan after deploy
 found a contrast failure there. **If the app has more than one population or backend
 mode, the default one is not optional to scan.**
+
+**4. The scope must match something.** *(fun, 2026-08-29.)* axe's two scoping calls
+behave differently when their selector matches nothing, and only one of them tells you:
+
+| | selector matches nothing |
+|---|---|
+| `.include(sel)` | **throws** — `No elements found for include in page Context` |
+| `.exclude(sel)` | **silent** — scans everything, reports clean |
+
+Measured, not assumed — the expectation going in was that both would be silent, and
+`include` turning out to be loud is the whole reason the two need different treatment.
+
+So a broken `include` dies on the first run, and a **stale `exclude` survives for as
+long as nobody looks**. One did: `fun` excluded `iframe.wrapped-game-frame` from its
+cross-skin matrix, and the last iframe left the shelf a day before anyone noticed the
+exclusion was still there. It excluded nothing, reported exactly the same green, and
+would have **silently widened** the moment an iframe returned — grading a live surface
+as exempt under a rule written for something that no longer existed.
+
+An exclusion is a claim that something is present *and* out of scope. The first half is
+checkable, and it is the half that rots. **Assert the target exists, in the same spec,
+or drop the exclusion.** `fun/tests/axe-scope.test.ts` enforces this by reading the
+specs: it is deliberately vacuous while no exclusions exist, and fires the moment one is
+added without proof.
+
+This is a different rule from *"zero excluded rules by default"* above, and both are
+needed: that one is about `disableRules` — muting a **check**; this one is about
+`.exclude()` — muting a **region**. A muted region is the quieter of the two, because
+nothing in the output distinguishes "excluded a real thing" from "excluded nothing".
 
 Pages deliberately left out of the scan **must say why in the spec file**. Both
 recorded exclusions are the same shape and both are legitimate: arecipe excludes its
@@ -135,6 +164,15 @@ resolves its PDS from a DID doc, so no host literal appears anywhere in its sour
 Hermeticity is satisfied by any of four forms — blocking cross-origin, a harness fetch
 shim, the spec stating its surface needs no network, or the repo declaring that once in
 its own docs.
+
+**Requirement 4 is not audit-enforced yet, deliberately.** The scope rule has one
+executable guard, `fun/tests/axe-scope.test.ts`, in the repo where the incident happened.
+It is recorded here because the *reasoning* is workspace-wide — the `include`/`exclude`
+asymmetry is a property of axe, not of `fun` — but a workspace audit check should wait
+until a second repo needs one. A check promoted on a single instance is how a rule
+arrives without evidence, and this doc's whole premise is that every rule names the
+incident that produced it. croft-pwa uses no `.exclude()` today, so it complies by
+having nothing to comply with.
 
 **The axe VERSION is part of the gate's definition.** A newer axe ships more rules, so
 two repos on different axe versions are not scanning to the same standard and a gate can
