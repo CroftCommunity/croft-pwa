@@ -64,10 +64,10 @@ rather than keeping a demo record type in a shipped namespace.
 
 ## Owed
 
-- **Publish the namespace** (`CroftC/.claude/LEXICONS.md` § 2) — one TXT record at
-  `_lexicon.croft.ing`, which takes precedence over the parking wildcard without removing
-  it. Until it exists, no other client can resolve `ing.croft.*`. The worked example, verified
-  2026-08-29: `_lexicon.recipe.exchange` → `did:plc:4cx7…` → four
-  `com.atproto.lexicon.schema` records whose rkeys are the NSIDs. This is croft.ing-wide
-  work — `ing.croft.*` is minted in at least four repos — and a demo type is a poor reason
-  to do it alone.
+- **Publish the namespace — tracked in `croft-stack/TODO.md`, not here.** `ing.croft.*` is
+  minted in five repos and resolves through one `_lexicon` TXT on croft.ing, so the work is
+  filed once, in the repo that owns the zone (`croft-stack/docs/DNS.md`). It needs an
+  account whose handle is `croft.ing` and two TXT records; nothing needs deleting despite
+  the parking wildcard at that name. Rule and measurement:
+  `CroftC/.claude/LEXICONS.md` § 2. Until it lands, no other client can resolve the
+  schemas in this repo.
