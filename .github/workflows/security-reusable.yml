@@ -228,26 +228,29 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The gate script lives beside this workflow but does not travel with it — a
-      # reusable workflow checks out the CALLER's repo, not its own. So we fetch it,
-      # at `github.job_workflow_sha`: the commit of the REUSABLE workflow being run,
-      # which is the only context that means "the version of me the caller asked
-      # for". `github.workflow_sha` is the caller's commit — the wrong repo entirely
-      # — and a hardcoded `main` cannot even bootstrap: the first run of this job
-      # fetched a main that did not have the script yet and died on a missing
-      # directory (observed 2026-08-29). Pinning to the workflow's own SHA makes
-      # script/workflow skew impossible for every caller, tag-pinned ones included.
-      - name: DEBUG which contexts carry the reusable workflow's own ref
-        run: |
-          echo "job_workflow_sha=[${{ github.job_workflow_sha }}]"
-          echo "workflow_ref=[${{ github.workflow_ref }}]"
-          echo "workflow_sha=[${{ github.workflow_sha }}]"
-          echo "repository=[${{ github.repository }}]"
-
+      # reusable workflow checks out the CALLER's repo, not its own. So we fetch it.
+      #
+      # `ref: main` is not laziness; it is what is left after measuring. GitHub
+      # documents `github.job_workflow_sha` as "the commit SHA for the reusable
+      # workflow file", which would be exactly right. Printed from a caller repo on
+      # runner 2.336.0 (2026-08-29) it is **empty**, and `github.workflow_ref` /
+      # `github.workflow_sha` are the CALLER's workflow and commit. No context
+      # carries this workflow's own ref, so there is nothing to pin to.
+      #
+      # Two consequences worth knowing rather than rediscovering:
+      #   - omitting `ref` does NOT fall back to this workflow's ref. actions/checkout
+      #     defaults to `github.ref` of the CURRENT repo, which silently works when
+      #     the caller happens to be croft-pwa and silently checks out an unrelated
+      #     default branch everywhere else — a green run in the host repo and a
+      #     missing directory in all seventeen others. Observed, in that order.
+      #   - a caller that pins this workflow to a tag would get the script from main.
+      #     Every caller pins `@main` today, so the two agree; if that changes, this
+      #     is the line that has to change with it.
       - name: Fetch the gate script
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: CroftCommunity/croft-pwa
-          ref: ${{ github.job_workflow_sha }}
+          ref: main
           path: .security-tooling
           sparse-checkout: .github/scripts
 
