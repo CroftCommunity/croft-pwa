@@ -1,0 +1,162 @@
+# The workspace secret-scanning gate, defined once and called by every repo.
+#
+# Rule and why: CroftC/.claude/SUPPLY-CHAIN.md rules 1 and 2. Rollout Phase 1 of
+# discovery/alpha/plans/2026-08-29-plan-supply-chain-rollout.md.
+#
+# WHY ONE FILE RATHER THAN EIGHTEEN. croft-pwa owns the CI standard (docs/CI.md), and
+# the scanner version must be PINNED — a floating `@latest` scanner is the same class of
+# bug as a shadowing cargo-clippy (CI-PATTERN rule 7). Eighteen copies of a pinned
+# version string is eighteen places to forget.
+#
+# WHY A PUBLIC HOST. Five repos here have no CI at all, and croft-stack and CroftC are
+# PRIVATE — exactly the two GitHub's own free secret scanning does not cover, and the
+# reason this gate exists rather than relying on it (GitHub alerts; a gate blocks).
+# Verified 2026-08-29: `gh api repos/CroftCommunity/croft-pwa/actions/permissions/access`
+# returns HTTP 422 "Access policy only applies to internal and private repositories", so
+# a public host is callable from everywhere.
+#
+# Callers do this and nothing else:
+#   jobs:
+#     secrets:
+#       uses: CroftCommunity/croft-pwa/.github/workflows/security-reusable.yml@main
+#
+# A repo needing extra allowlists adds `.gitleaks-extra.toml` at its root containing
+# only `[[allowlists]]` tables; this workflow appends it to the base below. It is an
+# EXTENSION point, not an override — the base rules cannot be switched off by a caller.
+
+name: security-reusable
+
+on:
+  workflow_call:
+    inputs:
+      gitleaks-version:
+        description: "Pinned gitleaks release, without the leading v."
+        type: string
+        default: "8.30.1"
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    # CI-PATTERN rule 8: a job with no timeout inherits GitHub's six-hour default, and
+    # a scan that hangs rather than fails sits there for all of it.
+    timeout-minutes: 10
+    steps:
+      # fetch-depth: 0 is load-bearing, not caution. Rule 2 is about scanning the PR's
+      # COMMIT RANGE, and a shallow checkout cannot see a reverted commit.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks (pinned)
+        run: |
+          set -euo pipefail
+          V="${{ inputs.gitleaks-version }}"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          ./gitleaks version
+
+      # The workspace baseline. Every allowlist below was derived from a MEASURED false
+      # positive across all 18 repos on 2026-08-29, never from a guess. Before it, an
+      # unconfigured scan reported 7,084 findings workspace-wide — 6,995 in arecipe
+      # alone — with ZERO true positives. After it, 15 remain, all prose, and 16 of 18
+      # repos are clean. That ratio is the whole argument for the file: a scanner
+      # adopted at 7,000 findings is a permanent mute, not a gate.
+      - name: Write the workspace baseline config
+        run: |
+          set -euo pipefail
+          cat > /tmp/gitleaks-base.toml <<'BASETOML'
+          [extend]
+          useDefault = true
+
+          # Machine-generated, content-addressed, and public by construction. High
+          # entropy is what these files ARE; it is not evidence of a secret.
+          [[allowlists]]
+          description = "lockfile checksums, build snapshots, dist output"
+          targets = ["path"]
+          paths = [
+            '''(^|/)Cargo\.lock$''',
+            '''(^|/)package-lock\.json$''',
+            '''(^|/)uv\.lock$''',
+            '''(^|/)gradle\.lockfile$''',
+            '''(^|/)assets/snapshot/''',
+            '''(^|/)dist/''',
+            '''(^|/)node_modules/''',
+          ]
+
+          # Test vectors are SUPPOSED to look like keys; that is what makes them vectors.
+          [[allowlists]]
+          description = "cryptographic conformance vectors"
+          targets = ["path"]
+          paths = [
+            '''(^|/)conformance/vectors/''',
+            '''(^|/)conformance-vectors/''',
+          ]
+
+          # atproto and DID identifiers are PUBLIC by specification. publicKeyMultibase
+          # is a public key; an rkey is a record identifier. Matched against the LINE,
+          # not the secret — the default target is the matched string, which does not
+          # contain the surrounding context that makes these identifiable.
+          [[allowlists]]
+          description = "atproto/DID public identifiers"
+          regexTarget = "line"
+          regexes = [
+            '''publicKeyMultibase''',
+            '''Multikey''',
+            '''Ed25519VerificationKey''',
+            '''did:(plc|web|key):''',
+            '''(?i)r_?key''',
+          ]
+
+          # Real private keys, committed on purpose, as fixtures. Allowlisted BY PATH so
+          # the private-key rule keeps firing everywhere else — it is the rule that found
+          # these, and it is exactly the one worth keeping loud.
+          [[allowlists]]
+          description = "deliberate SSH test fixtures"
+          targets = ["path"]
+          paths = ['''(^|/)tests?/fixtures/id_ed25519''']
+          BASETOML
+
+          # Per-repo extension: appended, never substituted. `[[allowlists]]` is an
+          # array-of-tables, so concatenation is the documented way to extend it.
+          if [ -f .gitleaks-extra.toml ]; then
+            echo "appending .gitleaks-extra.toml"
+            printf '\n' >> /tmp/gitleaks-base.toml
+            cat .gitleaks-extra.toml >> /tmp/gitleaks-base.toml
+          fi
+
+      - name: Scan
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          if [ -n "${BASE:-}" ] && [ -n "${HEAD_SHA:-}" ]; then
+            # PR: scan the RANGE, not the head commit. Rule 2 — and MEASURED, not
+            # assumed, against gitleaks 8.30.1 on 2026-08-29 with a ghp_ token added in
+            # one commit and reverted in the next:
+            #   --log-opts="HEAD~1..HEAD"  -> 0 commits scanned, NO LEAKS FOUND
+            #   --log-opts="BASE..HEAD"    -> leaks found: 1
+            #   (no --log-opts)            -> leaks found: 1
+            # The head-only form is what a naive gate uses, and it misses the leak
+            # entirely because the tip commit only deletes the file.
+            echo "scanning commit range ${BASE}..${HEAD_SHA}"
+            ./gitleaks git --log-opts="${BASE}..${HEAD_SHA}" \
+              --redact --no-banner -c /tmp/gitleaks-base.toml .
+          else
+            # push / schedule / dispatch: the whole history, which is where a secret
+            # scanner earns its keep — the leak is usually older than the PR.
+            echo "scanning full history"
+            ./gitleaks git --redact --no-banner -c /tmp/gitleaks-base.toml .
+          fi
+          rc=$?
+
+          # A gate whose failure does not name its own rule gets cargo-culted around.
+          # --redact is not optional: 20 of these repos are public, so an unredacted
+          # finding in a log is a SECOND disclosure.
+          if [ "$rc" -ne 0 ]; then
+            echo "::error title=Secret detected::gitleaks found a candidate credential. Rule: CroftC/.claude/SUPPLY-CHAIN.md rule 1 — secrets are scanned everywhere, public and private, and the gate blocks. If this is a deliberate fixture, add it to .gitleaks-extra.toml BY PATH with a reason. Never disable the scan."
+          fi
+          exit "$rc"
