@@ -10,7 +10,7 @@ repo instead of quietly waving findings through.
 
 import unittest
 
-from dep_gate import classify, gradle_configs_for, nearest_config
+from dep_gate import classify, gradle_configs_for, is_lockfile, nearest_config
 
 
 def npm(dependency_groups):
@@ -97,6 +97,38 @@ class GradleRung2(unittest.TestCase):
 
     def test_version_must_match_not_merely_the_name(self):
         self.assertEqual(gradle_configs_for(GRADLE_LOCK, "androidx.core:core-ktx", "1.0.0"), [])
+
+
+class WhatCountsAsALockfile(unittest.TestCase):
+    """The set of filenames the gate enumerates IS the scope of the gate, so it gets
+    tests of its own. requirements.txt was missing from the first version, and
+    discovery's `site/requirements.txt` — one pinned line, `markdown==3.7` — went
+    unscanned. It carried GHSA-5wmx-573v-2qwq (CVSS 7.5, fixed in 3.8.1). An
+    ecosystem nobody scans is not a clean one (SUPPLY-CHAIN.md rule 6)."""
+
+    def test_the_lockfiles_this_workspace_actually_has(self):
+        for p in ("Cargo.lock", "a/b/package-lock.json", "telemetry/uv.lock",
+                  "android/app/gradle.lockfile", "site/requirements.txt", "go.sum"):
+            self.assertTrue(is_lockfile(p), p)
+
+    def test_a_manifest_is_not_a_lockfile(self):
+        for p in ("Cargo.toml", "package.json", "pyproject.toml", "build.gradle.kts"):
+            self.assertFalse(is_lockfile(p), p)
+
+    def test_it_matches_the_basename_not_a_substring(self):
+        # `my-requirements.txt.bak` and `notes-about-Cargo.lock.md` are not lockfiles.
+        for p in ("docs/my-requirements.txt.bak", "notes-about-Cargo.lock.md",
+                  "requirements.txt.orig"):
+            self.assertFalse(is_lockfile(p), p)
+
+
+class PyPIRung2(unittest.TestCase):
+    def test_pypi_blocks_because_requirements_txt_records_no_distinction(self):
+        v = classify(
+            ecosystem="PyPI", name="markdown", version="3.7.0",
+            lockfile="site/requirements.txt", dependency_groups=None, advisory_paths=[],
+        )
+        self.assertEqual(v.verdict, "block")
 
 
 class CargoRung2(unittest.TestCase):

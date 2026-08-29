@@ -43,11 +43,18 @@ import subprocess
 import sys
 from dataclasses import dataclass
 
+# The scope of the gate IS this tuple, so it is tested rather than assumed.
+# requirements.txt is here despite being a manifest rather than a true lockfile: it is
+# the only thing standing between discovery's `site/` build dependency and no scanning
+# at all, and an unscannable ecosystem is not a clean one (SUPPLY-CHAIN.md rule 6). An
+# unpinned entry in one weakens the resolution, which is a finding about the file, not
+# a reason to leave the file unread.
 LOCKFILE_NAMES = (
     "Cargo.lock",
     "package-lock.json",
     "uv.lock",
     "poetry.lock",
+    "requirements.txt",
     "gradle.lockfile",
     "go.sum",
 )
@@ -59,6 +66,11 @@ MANIFEST_NAMES = ("Cargo.toml", "package.json", "pyproject.toml", "go.mod", "bui
 # debugAndroidTestRuntimeClasspath and releaseUnitTestRuntimeClasspath, which is how a
 # gate ends up blocking a release on the test harness's dependencies.
 SHIPPED_GRADLE_CONFIG = re.compile(r"^(debug|release)RuntimeClasspath$")
+
+
+def is_lockfile(path: str) -> bool:
+    """Whether a repo-relative path is one of the lockfiles this gate reads."""
+    return os.path.basename(path) in LOCKFILE_NAMES
 
 
 @dataclass(frozen=True)
@@ -145,6 +157,12 @@ def classify(*, ecosystem, name, version, lockfile, dependency_groups, advisory_
                        "decided mechanically — settle it in osv-scanner.toml with "
                        "`cargo tree -i <crate> --edges normal` per shipped binary")
 
+    if ecosystem == "PyPI":
+        return Verdict("block", "production",
+                       f"{os.path.basename(lockfile)} records no dev/production distinction, "
+                       "so rung 2 cannot be decided mechanically — settle it in "
+                       "osv-scanner.toml, or move the dependency into a declared group")
+
     return Verdict("block", "production",
                    f"ecosystem {ecosystem} has no rung-2 rule in this gate yet")
 
@@ -155,8 +173,7 @@ def classify(*, ecosystem, name, version, lockfile, dependency_groups, advisory_
 
 def tracked_lockfiles(root: str) -> list[str]:
     out = subprocess.run(["git", "-C", root, "ls-files"], capture_output=True, text=True, check=True)
-    names = set(LOCKFILE_NAMES)
-    return sorted(p for p in out.stdout.splitlines() if os.path.basename(p) in names)
+    return sorted(p for p in out.stdout.splitlines() if is_lockfile(p))
 
 
 def has_manifest(root: str) -> bool:
