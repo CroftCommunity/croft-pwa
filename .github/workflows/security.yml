@@ -32,4 +32,4 @@ permissions:
 
 jobs:
   security:
-    uses: CroftCommunity/croft-pwa/.github/workflows/security-reusable.yml@main
+    uses: CroftCommunity/croft-pwa/.github/workflows/security-reusable.yml@claude/ziz-verify
