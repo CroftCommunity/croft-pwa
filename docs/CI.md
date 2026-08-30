@@ -317,6 +317,19 @@ everywhere, private callers included.
   Node toolchain, so a suite only this repo runs is a check the other seventeen
   never invoke.
 
+  The same job also decides **inbound licences**, out of the same osv-scanner run and
+  by the same rung-2 verdict — a CVE matters if the vulnerable code ships, and a
+  licence term attaches if the licensed code is *distributed*, so it is one question
+  asked once. Measured 2026-08-29: all 40 licence violations in the workspace are
+  unshipped, the LGPL-2.1 `jna` included, and zero per-package exceptions were needed.
+  The allowlist is a constant in `dep_gate.py` and **deliberately not a workflow
+  input** — one outbound licence (AGPL-3.0) means one inbound list, or the repo with
+  the loosest list becomes the one others copy from.
+
+  Note the licence half resolves through deps.dev, so `deps` needs the network where
+  the vulnerability half alone would not; an outage surfaces as a gate failure, not a
+  silent pass.
+
 **Extending, never overriding.** A repo with extra secret allowlists adds
 `.gitleaks-extra.toml`; the workflow *appends* it to the workspace baseline. A repo
 that publishes nothing from a subtree — frozen spikes, proofs — passes
