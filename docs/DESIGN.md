@@ -244,7 +244,7 @@ implements it in plain ESM, this repo in TypeScript):
   many — naming it as the category is the misunderstanding the sheet exists to correct).
   Owner wording, 2026-08-29. Retired phrasings, all harvested from live repos that day:
   *Sign in with your PDS*, *Choose your server*, *Another server*, *any atproto server*,
-  *Sign in with Bluesky*, *your Bluesky handle*. The workspace audit (check 44) flags them.
+  *Sign in with Bluesky*, *your Bluesky handle*. The workspace audit (check 45) flags them.
 - **The gloss, verbatim:** *"A Personal Data Server provider in the open social
   Atmosphere."* It is exported as `ATMO_GLOSS` and asserted by test, so the definition
   cannot drift between repos.
@@ -277,7 +277,7 @@ title and gloss, both panels, 320px fit + 44px, axe on the OPEN sheet in both th
 intent per provider — which is also the CSP proof), `tests/e2e/atproto.spec.ts` (the
 handle path through to a completed token exchange), `tests/live/signin-providers.live.spec.ts`
 (posture, OAuth, `create`, scope, and authorization-server drift; local only). Workspace:
-`CroftC/.claude/bin/workspace-audit.sh` check 44 (copy nouns, registry presence), proved
+`CroftC/.claude/bin/workspace-audit.sh` check 45 (copy nouns, registry presence), proved
 RED on four harvested fixtures by `bin/test-signin-copy.sh`.
 
 ## What is not met yet — recorded, not accommodated
@@ -291,11 +291,11 @@ step 1: prescribe, and write the gap down where it is):
 | **forage** | native `<dialog>` sheet + sidebar card + masthead one-tap | registry (`js/auth/hosts.js`, 4) + handle | yes | atmo provider (PR #15; two "atproto server" sentences outside the sheet fixed there) | yes, once #15 lands |
 | **bluebird** | inline form on `patrol.html` + feed banner | handle only (`your handle, e.g. you.bsky.social`) | no | *Sign in with Bluesky*, *Your Bluesky handle*, *PDS host (optional)* | **no** — noun, no registry, no create |
 | **arecipe** | dedicated `signin.html` page | handle only | no | *Sign in with your Bluesky handle* | **no** — noun, no registry, no create (page container is a legitimate variant; the sheet is an exception, not a mandate) |
-| **greetings_site** | inline form on the create view | handle only (`you.bsky.social`) | no | *Sign in with your Bluesky handle to make a card*, label *Bluesky handle* | **no** — noun, no registry, no create. Not in the survey at all; check 44 found it on its first run, which is the argument for a check over a survey |
+| **greetings_site** | inline form on the create view | handle only (`you.bsky.social`) | no | *Sign in with your Bluesky handle to make a card*, label *Bluesky handle* | **no** — noun, no registry, no create. Not in the survey at all; check 45 found it on its first run, which is the argument for a check over a survey |
 | fun | — | — | — | — | n/a (no accounts) |
 | connect | — (web resolver only) | — | — | — | n/a |
 
 The gaps in bluebird, arecipe and greetings_site are real and stand unweakened; each
-carries a TODO in its own repo citing this section, and check 44 will keep saying so until
+carries a TODO in its own repo citing this section, and check 45 will keep saying so until
 the copy changes. `discovery` is skipped by the check by name: it is thinking, proofs and
 spikes, and the hit there was an unpacked seed bundle nobody ships.
