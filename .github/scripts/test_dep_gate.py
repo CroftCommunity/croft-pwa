@@ -11,6 +11,7 @@ repo instead of quietly waving findings through.
 import unittest
 
 from dep_gate import (
+    LICENCE_ALLOWLIST,
     cargo_source_for,
     classify,
     gradle_configs_for,
@@ -442,6 +443,22 @@ class AdvisoryPathsCannotSilenceTheWholeGate(unittest.TestCase):
             advisory_paths=["alpha/exp"],
         )
         self.assertEqual(v.verdict, "block")
+
+
+class TheAllowlistItself(unittest.TestCase):
+    """SUPPLY-CHAIN.md rule 7: one inbound list for one outbound licence (AGPL-3.0), grown
+    one named package at a time. GPL-2.0-or-later is admitted because "or later" reaches
+    GPL-3.0, and GPLv3 §13 permits combining with AGPLv3; GPL-2.0-only stays denied because
+    it cannot be relicensed upward. First package to need it: @ffmpeg/core (regift, 2026-08-30)."""
+
+    def test_gpl_2_or_later_is_admitted(self):
+        self.assertIn("GPL-2.0-or-later", LICENCE_ALLOWLIST)
+        self.assertEqual(unresolved_licences(["GPL-2.0-or-later"], set(LICENCE_ALLOWLIST), first_party=False), [])
+
+    def test_gpl_2_only_stays_denied(self):
+        self.assertNotIn("GPL-2.0-only", LICENCE_ALLOWLIST)
+        self.assertEqual(unresolved_licences(["GPL-2.0-only"], set(LICENCE_ALLOWLIST), first_party=False),
+                         ["GPL-2.0-only"])
 
 
 class TheSuiteRunsWhicheverWayItIsInvoked(unittest.TestCase):

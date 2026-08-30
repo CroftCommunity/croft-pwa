@@ -89,7 +89,10 @@ MANIFEST_NAMES = ("Cargo.toml", "package.json", "pyproject.toml", "go.mod", "bui
 # Denials are by omission, and rule 7 names the ones that matter: SSPL, BUSL-1.1,
 # Elastic-2.0, CC-BY-NC-*, and GPL-2.0-only — the last being the one routinely missed,
 # because GPL-2.0-ONLY cannot upgrade to GPL-3 and so cannot be absorbed by AGPL-3.0.
-# For the same reason LGPL-2.1-or-later is allowed while a bare LGPL-2.1 is not.
+# For the same reason LGPL-2.1-or-later is allowed while a bare LGPL-2.1 is not, and
+# GPL-2.0-or-later IS allowed: "or later" reaches GPL-3.0, and GPLv3 §13 permits combining
+# with AGPLv3. First package to need it: @ffmpeg/core (regift's on-device muxer,
+# 2026-08-30) — a shipped path, so rung 2 correctly refused to note it away.
 #
 # Two entries are easy to misread:
 #   BSL-1.0 is the Boost Software License (permissive) — NOT BUSL-1.1, the Business
@@ -103,7 +106,8 @@ MANIFEST_NAMES = ("Cargo.toml", "package.json", "pyproject.toml", "go.mod", "bui
 LICENCE_ALLOWLIST = (
     "0BSD", "AGPL-3.0-only", "AGPL-3.0-or-later", "Apache-2.0", "BSD-1-Clause",
     "BSD-2-Clause", "BSD-3-Clause", "BSL-1.0", "BlueOak-1.0.0", "CC-BY-4.0", "CC0-1.0",
-    "CDLA-Permissive-2.0", "ISC", "LGPL-2.1-or-later", "MIT", "MIT-0", "MPL-2.0",
+    "CDLA-Permissive-2.0", "GPL-2.0-or-later", "ISC", "LGPL-2.1-or-later", "MIT", "MIT-0",
+    "MPL-2.0",
     "OFL-1.1", "Python-2.0", "Unicode-3.0", "Unlicense", "Zlib",
 )
 
