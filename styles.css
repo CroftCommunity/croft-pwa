@@ -420,3 +420,130 @@ main {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* --- Sign-in sheet (docs/DESIGN.md § Components › Sheet) --- */
+/* Bottom sheet on a phone; a centred dialog gets the extra room on a desktop.
+   Native <dialog>, so focus, Esc and inertness cost nothing (see sheet.ts). */
+dialog.signin-sheet {
+  background: var(--bg);
+  color: var(--ink);
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--r-l) var(--r-l) 0 0;
+  padding: var(--s-4);
+  margin: auto 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 92dvh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+dialog.signin-sheet::backdrop {
+  background: var(--ink);
+  opacity: 0.55;
+}
+@media (min-width: 40rem) {
+  dialog.signin-sheet {
+    margin: auto;
+    width: 28rem;
+    border-radius: var(--r-l);
+  }
+}
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+}
+.sheet-head h2 {
+  margin: 0;
+}
+.sheet-x {
+  background: none;
+  border: 0;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font: inherit;
+  min-width: 44px;
+  min-height: 44px;
+}
+.sheet-x:hover {
+  color: var(--ink);
+}
+/* The gloss keeps the UA's dotted underline as the "there is more here" cue. */
+.sheet-gloss {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.sheet-intro {
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+  margin: var(--s-2) 0 var(--s-3);
+}
+.sheet-list {
+  margin: var(--s-3) 0;
+}
+.sheet-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+}
+.sheet-row + .sheet-row {
+  border-top: var(--stroke) solid var(--border);
+}
+.sheet-provider {
+  font-weight: 600;
+}
+.sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: none;
+}
+.btn-sm {
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--t-caption);
+}
+/* The words occupy the create slot rather than sitting after the row, so the
+   Sign in column stays aligned down the list and the italic reads as the
+   explanation for the button that is not there. */
+.sheet-invite {
+  min-width: 6.5rem;
+  text-align: center;
+  font-style: italic;
+  color: var(--ink-muted);
+  font-size: var(--t-caption);
+}
+.sheet-more {
+  width: 100%;
+  justify-content: center;
+}
+.sheet-other .sheet-list {
+  margin: 0 0 var(--s-3);
+}
+.sheet-other-form {
+  margin-top: var(--s-3);
+}
+.sheet-label {
+  display: block;
+  font-size: var(--t-caption);
+  color: var(--ink-muted);
+}
+.sheet-handle-row {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+}
+.sheet-handle-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--s-2) var(--s-3);
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--r-m);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
