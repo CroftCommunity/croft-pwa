@@ -10,7 +10,17 @@ repo instead of quietly waving findings through.
 
 import unittest
 
-from dep_gate import classify, gradle_configs_for, is_lockfile, nearest_config
+from dep_gate import (
+    cargo_source_for,
+    classify,
+    gradle_configs_for,
+    is_first_party,
+    is_lockfile,
+    nearest_config,
+    normalise_licence,
+    scan_outcome,
+    unresolved_licences,
+)
 
 
 def npm(dependency_groups):
@@ -194,3 +204,178 @@ class NearestConfig(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — licences (SUPPLY-CHAIN.md rule 7)
+# ---------------------------------------------------------------------------
+
+class DeprecatedOrLaterSuffix(unittest.TestCase):
+    """SPDX's `+` suffix means "or later". osv-scanner 2.3.5 REPORTS it and REFUSES it:
+    deps.dev returns `MPL-2.0+` for the `im` crate family, while `--licenses=...,MPL-2.0+`
+    is rejected with "not recognized as spdx: MPL-2.0+" — and on that rejection the
+    scanner writes to stderr, emits NO JSON and exits 0. The two halves of one tool
+    disagree about what SPDX is, so the gate bridges them rather than the allowlist."""
+
+    def test_plus_suffix_normalises_to_its_base_identifier(self):
+        self.assertEqual(normalise_licence("MPL-2.0+"), "MPL-2.0")
+        self.assertEqual(normalise_licence("LGPL-2.1+"), "LGPL-2.1")
+
+    def test_a_bare_identifier_is_unchanged(self):
+        self.assertEqual(normalise_licence("MPL-2.0"), "MPL-2.0")
+        self.assertEqual(normalise_licence("Apache-2.0 OR MIT"), "Apache-2.0 OR MIT")
+
+    def test_normalising_does_not_admit_a_licence_that_is_denied_anyway(self):
+        # `+` widens the version, never the licence family.
+        self.assertEqual(unresolved_licences(["GPL-3.0+"], {"MPL-2.0"}, first_party=False),
+                         ["GPL-3.0+"])
+
+    def test_a_lone_plus_is_not_stripped_into_an_empty_identifier(self):
+        self.assertEqual(normalise_licence("+"), "+")
+
+
+CARGO_LOCK = "\n".join([
+    'version = 3',
+    '',
+    '[[package]]',
+    'name = "croft-ffi"',
+    'version = "0.0.0"',
+    '',
+    '[[package]]',
+    'name = "ciss"',
+    'version = "0.8.0"',
+    'source = "git+https://github.com/CroftCommunity/CISS.git?rev=2d1e685#2d1e685"',
+    '',
+    '[[package]]',
+    'name = "social-tree-core"',
+    'version = "0.1.0"',
+    'source = "git+ssh://git@github-personal/CroftCommunity/croft.git?rev=9f7d0c6#9f7d0c6"',
+    '',
+    '[[package]]',
+    'name = "aead"',
+    'version = "0.5.2"',
+    'source = "registry+https://github.com/rust-lang/crates.io-index"',
+])
+
+
+class FirstPartyProvenance(unittest.TestCase):
+    """`UNKNOWN` is resolved BY NAME, never blanket-ignored (rule 7). Measured
+    2026-08-29 across all 18 repos: 230 packages report UNKNOWN, and 229 of them are
+    our own code — 221 workspace members with no `source` at all, and 8 pinned by git
+    to CroftCommunity. The one remainder (`khroma`, npm) is a third-party package and
+    must NOT be resolved this way. Provenance is the discriminator that separates them
+    without a 143-name list nobody would maintain."""
+
+    def test_a_workspace_member_has_no_source_and_is_first_party(self):
+        self.assertIsNone(cargo_source_for(CARGO_LOCK, "croft-ffi", "0.0.0"))
+        self.assertTrue(is_first_party(None, org="CroftCommunity"))
+
+    def test_a_git_pin_on_our_own_org_is_first_party_over_https_and_ssh(self):
+        self.assertTrue(is_first_party(cargo_source_for(CARGO_LOCK, "ciss", "0.8.0"),
+                                       org="CroftCommunity"))
+        self.assertTrue(is_first_party(cargo_source_for(CARGO_LOCK, "social-tree-core", "0.1.0"),
+                                       org="CroftCommunity"))
+
+    def test_a_registry_crate_is_third_party(self):
+        self.assertFalse(is_first_party(cargo_source_for(CARGO_LOCK, "aead", "0.5.2"),
+                                        org="CroftCommunity"))
+
+    def test_another_orgs_repo_is_third_party_even_on_the_same_host(self):
+        self.assertFalse(is_first_party("git+https://github.com/someone-else/x.git?rev=a#a",
+                                        org="CroftCommunity"))
+
+    def test_an_absent_package_yields_no_source_rather_than_raising(self):
+        self.assertIsNone(cargo_source_for(CARGO_LOCK, "not-here", "9.9.9"))
+
+    def test_a_version_mismatch_is_not_a_match(self):
+        # Two versions of one crate can differ in provenance; the pair is the key.
+        self.assertIsNone(cargo_source_for(CARGO_LOCK, "aead", "0.4.0"))
+
+
+class UnresolvedLicences(unittest.TestCase):
+    """What survives the gate's own two resolutions and therefore reaches rung 2."""
+
+    def test_an_allowlisted_licence_reported_with_a_plus_is_resolved(self):
+        self.assertEqual(unresolved_licences(["MPL-2.0+"], {"MPL-2.0"}, first_party=False), [])
+
+    def test_unknown_on_our_own_code_is_resolved_by_provenance(self):
+        self.assertEqual(unresolved_licences(["UNKNOWN"], {"MIT"}, first_party=True), [])
+
+    def test_unknown_on_a_third_party_package_survives(self):
+        self.assertEqual(unresolved_licences(["UNKNOWN"], {"MIT"}, first_party=False), ["UNKNOWN"])
+
+    def test_provenance_does_not_launder_a_real_licence(self):
+        # First-party resolves IGNORANCE about our own code, not a stated denial.
+        self.assertEqual(unresolved_licences(["SSPL-1.0"], {"MIT"}, first_party=True), ["SSPL-1.0"])
+
+    def test_non_standard_is_never_resolved_by_provenance(self):
+        # `non-standard` is deps.dev saying a THIRD-party POM had an unparseable
+        # licence string; it is not the absence-of-a-record that UNKNOWN is.
+        self.assertEqual(unresolved_licences(["non-standard"], {"MIT"}, first_party=True),
+                         ["non-standard"])
+
+    def test_several_violations_are_all_reported(self):
+        self.assertEqual(unresolved_licences(["EPL-2.0", "MPL-2.0+", "SSPL-1.0"],
+                                             {"MPL-2.0"}, first_party=False),
+                         ["EPL-2.0", "SSPL-1.0"])
+
+
+class LicenceMeetsRungTwo(unittest.TestCase):
+    """A licence obligation attaches to DISTRIBUTION, so the same rung-2 question the
+    vulnerability half asks answers the licence half too — and it is load-bearing.
+    Measured on croft/android 2026-08-29: every one of the 38 Maven licence violations,
+    the LGPL-2.1 JNA included, sits in a test-only configuration; the JNA that actually
+    ships is 5.14.0, which reports a compatible licence. Without rung 2 the licence
+    gate blocks a client release on the licence of the emulator-control plugin — the
+    same failure rule 4 was written to prevent for CVEs."""
+
+    def test_the_unshipped_lgpl_jna_is_noted_not_blocked(self):
+        v = classify(
+            ecosystem="Maven", name="net.java.dev.jna:jna", version="5.6.0",
+            lockfile="android/app/gradle.lockfile", dependency_groups=None,
+            advisory_paths=[],
+            gradle_configs=["_internal-unified-test-platform-android-test-plugin-host-retention"],
+        )
+        self.assertEqual(v.verdict, "note")
+
+    def test_the_same_licence_on_a_shipped_configuration_blocks(self):
+        v = classify(
+            ecosystem="Maven", name="net.java.dev.jna:jna", version="5.6.0",
+            lockfile="android/app/gradle.lockfile", dependency_groups=None,
+            advisory_paths=[], gradle_configs=["releaseRuntimeClasspath"],
+        )
+        self.assertEqual(v.verdict, "block")
+
+    def test_a_dev_only_npm_licence_is_noted(self):
+        # elkjs (EPL-2.0) and khroma (UNKNOWN) both reach discovery only through
+        # @mermaid-js/mermaid-cli, a build-time devDependency — measured 2026-08-29.
+        self.assertEqual(npm(["dev"]).verdict, "note")
+
+
+class ScanOutcome(unittest.TestCase):
+    """osv-scanner 2.3.5 distinguishes "nothing to scan" from "I refused to run", and
+    the gate must too — measured 2026-08-29, all four codes on real invocations:
+
+        0    clean            1    vulnerabilities found
+        127  usage error      — e.g. `--licenses` handed a non-SPDX identifier
+        128  no package sources found — every lockfile passed held zero packages
+
+    Both 127 and 128 emit an EMPTY stdout, so the JSON is no help; only the exit code
+    separates them. Collapsing them (as "anything but 0 or 1 is a failure" does) breaks
+    a repo whose lockfile is legitimately empty — found by running the GREEN half of
+    the licence validation, where removing the offending dependency left a valid
+    lockfile with no packages and the gate reported "could not run"."""
+
+    def test_clean_and_vulnerable_are_both_successful_runs(self):
+        self.assertEqual(scan_outcome(0), "ok")
+        self.assertEqual(scan_outcome(1), "ok")
+
+    def test_no_package_sources_is_empty_not_broken(self):
+        self.assertEqual(scan_outcome(128), "empty")
+
+    def test_a_usage_error_is_a_gate_failure(self):
+        self.assertEqual(scan_outcome(127), "failed")
+
+    def test_an_unrecognised_code_fails_closed(self):
+        self.assertEqual(scan_outcome(2), "failed")
+        self.assertEqual(scan_outcome(-9), "failed")
