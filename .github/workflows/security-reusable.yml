@@ -1,8 +1,8 @@
-# The workspace security gates — secrets AND dependencies — defined once and called by
-# every repo.
+# The workspace security gates — secrets, dependency vulnerabilities AND inbound
+# licences — defined once and called by every repo.
 #
-# Rule and why: CroftC/.claude/SUPPLY-CHAIN.md rules 1, 2, 3, 5 and 6. Rollout Phases 1
-# and 2 of discovery/alpha/plans/2026-08-29-plan-supply-chain-rollout.md.
+# Rule and why: CroftC/.claude/SUPPLY-CHAIN.md rules 1, 2, 3, 5, 6 and 7. Rollout Phases
+# 1, 2 and 3 of discovery/alpha/plans/2026-08-29-plan-supply-chain-rollout.md.
 #
 # WHY ONE FILE RATHER THAN EIGHTEEN. croft-pwa owns the CI standard (docs/CI.md), and
 # the scanner version must be PINNED — a floating `@latest` scanner is the same class of
@@ -27,6 +27,12 @@
 # a caller. Per-advisory dependency exceptions live in each repo's own
 # `osv-scanner.toml`, dated and expiring (rule 9); a subtree that ships nothing is
 # declared with the `advisory-paths` input.
+#
+# THE LICENCE ALLOWLIST IS DELIBERATELY NOT AN INPUT. There is one outbound licence
+# (AGPL-3.0) and therefore one inbound allowlist, which lives in dep_gate.py where
+# every caller gets the same one. A per-caller override would let the repo with the
+# loosest list become the one others copy from — the failure that made croft-pwa's MIT
+# relicensing necessary in the first place (rule 7).
 
 name: security-reusable
 
@@ -263,9 +269,14 @@ jobs:
       # only croft-pwa runs is a check the other seventeen never invoke
       # (VERIFICATION.md, "a check nothing invokes"). Running them first means a
       # broken classifier fails loudly instead of waving findings through.
+      # `-m unittest <module>` and NOT `python3 test_dep_gate.py`: the script form
+      # collects whatever TestCases exist when `unittest.main()` executes, so tests
+      # appended below that call are silently skipped. Measured 2026-08-29 — the script
+      # form ran 23 of 48 while the module form ran all 48, and the 25 it skipped were
+      # the ones under review. The module form imports before it collects.
       - name: Test the classifier
         working-directory: .security-tooling/.github/scripts
-        run: python3 test_dep_gate.py
+        run: python3 -m unittest test_dep_gate -v
 
       - name: Install osv-scanner (pinned, checksum-verified)
         run: |
@@ -280,7 +291,11 @@ jobs:
           chmod +x osv-scanner
           ./osv-scanner --version
 
-      - name: Scan dependencies
+      # Vulnerabilities and licences come from ONE osv-scanner run and share one
+      # rung-2 verdict — see dep_gate.py's module docstring for why they are the same
+      # question. The licence half resolves through deps.dev, so this step needs the
+      # network where the vulnerability half alone would not.
+      - name: Scan dependencies — vulnerabilities and inbound licences
         env:
           ADVISORY_PATHS: ${{ inputs.advisory-paths }}
           ENFORCE: ${{ inputs.deps-enforce }}

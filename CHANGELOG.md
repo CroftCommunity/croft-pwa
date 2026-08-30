@@ -9,6 +9,17 @@ Started 2026-08-29; earlier history is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 The dependency gate decides **inbound licences** as well as CVEs, from one
+  osv-scanner run and one rung-2 verdict: a licence term attaches on distribution, so
+  "does this reach a shipped artifact" answers both. All 40 licence violations here are
+  unshipped — the LGPL-2.1 `jna` sits in the test harness while the `jna` that ships
+  reports a compatible licence — so no per-package exception was needed anywhere. The
+  allowlist is a constant in `dep_gate.py`, not a caller input: one outbound licence
+  means one inbound list. Callers get this without editing a line.
+- 2026-08-29 The gate no longer reports "could not run" against a lockfile that
+  legitimately has no dependencies. osv-scanner exits 128 for "no package sources
+  found" and 127 for a rejected argument, both with empty stdout; treating every
+  non-zero code as broken conflated them.
 - 2026-08-29 The dependency gate reads `requirements.txt` too. It did not, and
   discovery's one pinned Python build dependency was going unscanned — it carried
   GHSA-5wmx-573v-2qwq (CVSS 7.5). An ecosystem nobody scans is not a clean one.
