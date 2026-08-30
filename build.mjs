@@ -174,6 +174,9 @@ const jsSri = Object.fromEntries(
 // 7. Build-time CSP. default-src 'none' + explicit allowlists; the inline theme
 // script is admitted by its sha256 (never 'unsafe-inline'). connect-src widens
 // to the atproto origins when the PDA module lands (P3).
+const PROVIDER_ORIGINS = JSON.parse(readFileSync(join(root, 'src/signin/providers.json'), 'utf8'))
+  .providers.map((p) => p.entryway)
+  .filter((o) => o !== 'https://bsky.social');
 const csp = [
   "default-src 'none'",
   "base-uri 'none'",
@@ -187,8 +190,11 @@ const csp = [
   "manifest-src 'self'",
   // atproto read path: the public AppView + the PLC directory + bsky PDS hosts.
   // Arbitrary non-bsky PDS hosts can't be statically allowlisted (documented in
-  // docs/ATPROTO.md); the demo reads via the AppView, which covers them.
-  "connect-src 'self' https://public.api.bsky.app https://plc.directory https://bsky.social https://*.host.bsky.network",
+  // docs/ATPROTO.md); the demo reads via the AppView, which covers them. The
+  // sign-in sheet's REGISTERED providers can be, and are, read from the same
+  // JSON the sheet renders from — each is its own authorization server (probed
+  // 2026-08-29), so discovery, PAR and token all stay inside this allowlist.
+  `connect-src 'self' https://public.api.bsky.app https://plc.directory https://bsky.social https://*.host.bsky.network ${PROVIDER_ORIGINS.join(' ')}`,
   "worker-src 'self'",
   `script-src 'self' 'sha256-${sha256base64(THEME_INIT_JS)}'`,
 ].join('; ');

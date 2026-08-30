@@ -7,7 +7,8 @@ import {
   type DpopKey,
   type StoredDpopKey,
 } from './dpop';
-import { resolveIdentity, type ResolveDeps } from './resolve';
+import { resolveIdentity, resolveEntryway, isEntryway, type ResolveDeps } from './resolve';
+import { resolvePds } from '../read';
 import { randomB64url } from './jose';
 
 /**
@@ -109,14 +110,30 @@ async function dpopForm(
   return { data, nonce: serverNonce, status: res.status };
 }
 
-/** Step 1: resolve identity, push the authorization request, return the URL to visit. */
+export interface BeginOptions {
+  /**
+   * `create` lands the person in the provider's registration wizard instead of
+   * its sign-in screen (advertised in prompt_values_supported). Only meaningful
+   * for a provider start; the sheet offers it only where signups are open.
+   */
+  readonly prompt?: 'create';
+}
+
+/**
+ * Step 1: push the authorization request, return the URL to visit. `target` is
+ * a handle or DID (identity first, `login_hint` sent) OR a provider entryway
+ * such as `https://bsky.social` (server first, no hint — the DID comes back in
+ * the token). docs/DESIGN.md § Flows › Sign in.
+ */
 export async function beginAuthorization(
-  handleOrDid: string,
+  target: string,
   cfg: OAuthConfig,
   deps: ResolveDeps = {},
+  options: BeginOptions = {},
 ): Promise<{ authorizeUrl: string; pending: PendingAuth }> {
   const fetchImpl = fetchOf(cfg);
-  const id = await resolveIdentity(handleOrDid, { ...deps, ...(cfg.fetchImpl ? { fetchImpl } : {}) });
+  const resolveDeps = { ...deps, ...(cfg.fetchImpl ? { fetchImpl } : {}) };
+  const id = isEntryway(target) ? await resolveEntryway(target, resolveDeps) : await resolveIdentity(target, resolveDeps);
   const pkce = await createPkce();
   const key = await generateDpopKey();
   const state = randomB64url(16);
@@ -131,7 +148,8 @@ export async function beginAuthorization(
       state,
       code_challenge: pkce.challenge,
       code_challenge_method: 'S256',
-      login_hint: handleOrDid,
+      ...(id.did ? { login_hint: target } : {}),
+      ...(options.prompt ? { prompt: options.prompt } : {}),
     },
     key,
     fetchImpl,
@@ -188,14 +206,22 @@ export async function completeAuthorization(
   if (typeof accessToken !== 'string') {
     throw new Error(`Token exchange failed (${status})${data.error ? `: ${data.error}` : ''}`);
   }
-  // atproto binds the returned `sub` to the authenticated DID; verify it.
-  if (typeof data.sub === 'string' && data.sub !== pending.did) {
+  // atproto binds the returned `sub` to the authenticated DID; verify it — or,
+  // after a provider start (no DID resolved up front), take it from here and
+  // resolve the person's REAL PDS, which need not be the entryway they chose.
+  const sub = typeof data.sub === 'string' ? data.sub : undefined;
+  if (pending.did && sub && sub !== pending.did) {
     throw new Error('Token subject does not match the resolved DID');
   }
+  if (!pending.did && !sub) {
+    throw new Error('Token carries no subject and no DID was resolved up front — refusing an anonymous session');
+  }
+  const did = pending.did || (sub as string);
+  const pds = pending.did ? pending.pds : await resolvePds(did, { fetchImpl });
 
   return {
-    did: pending.did,
-    pds: pending.pds,
+    did,
+    pds,
     issuer: pending.issuer,
     accessToken,
     ...(typeof data.refresh_token === 'string' ? { refreshToken: data.refresh_token } : {}),
