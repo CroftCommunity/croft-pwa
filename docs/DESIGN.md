@@ -84,6 +84,34 @@ owns the toggle after load and keeps `<meta name="theme-color">` in sync with
 Where a repo has **skins**, light and dark are registry entries inside a skin, not this
 second axis — `CroftC/.claude/SKINS.md` governs and this section yields to it.
 
+### Defaults come from the device; choices come from the person
+
+Theme resolution above is one instance of a general rule, and **content languages** are the
+second (forage, 2026-08-30, owner: *"default to the browser language"*). For any preference
+the device already knows — colour scheme, reduced motion, **the browser's language list** —
+the resolution is the same three-state ladder, in this order:
+
+1. **An explicit stored choice wins**, including the explicit choice of *no filter* /
+   *everything*. That choice is stored as a value of its own (forage stores `''` for "every
+   language"), never as a removed key — a removed key reads as *never chose* and would fall
+   back to the device, so a person's "show me everything" would quietly undo itself on the
+   next visit.
+2. **Otherwise the device**: `prefers-color-scheme`, `navigator.languages` (ordered; base
+   tags, de-duped), limited to **what the settings surface can display** — a seeded
+   preference the panel cannot show is one the reader cannot see or undo. A device asking
+   only for options the app does not list seeds nothing.
+3. **The surface says which is in force.** The settings card names the seed in words and
+   shows it selected (*"Until you choose, this follows your browser's languages — right now
+   English"*); any list the seed narrows says how many items it hid. A default the reader
+   cannot see is a silent filter, and a silent filter is a lie.
+
+The resolver is a pure function of `(stored, deviceValues)` and unit-tested with the device
+value as a parameter — a test can be a browser in Portuguese without pretending to be one
+(`resolveTheme(stored, prefersDark)`; forage `active(navLangs)`). Reference implementations:
+theme in `src/theme.ts` here; content languages in forage `js/lang.js`. No new workspace
+check: this refines the *why* behind an existing rule and names its second instance, and
+each instance is gated in its own repo (§ The gate).
+
 ### Layout and accessibility
 
 Not restated. `MOBILE-FIRST.md` (320/360/390, the 44px tap floor, the unfalsifiable
@@ -271,7 +299,8 @@ trying to get something done.
 ## The gate
 
 What proves this doc, in this repo: `brand-nohex` + `brand-tokens` (Foundations),
-`tests/unit/theme.test.ts`, `tests/unit/signin-providers.test.ts` (registry, split,
+`tests/unit/theme.test.ts` (the device-default ladder, theme instance; the languages
+instance is forage `test/lang.test.js` + `e2e/bluesky-view` / `e2e/signin`), `tests/unit/signin-providers.test.ts` (registry, split,
 two-direction create), `tests/e2e/signin-sheet.spec.ts` (sheet closed-until-asked, the
 title and gloss, both panels, 320px fit + 44px, axe on the OPEN sheet in both themes, PAR
 intent per provider — which is also the CSP proof), `tests/e2e/atproto.spec.ts` (the
