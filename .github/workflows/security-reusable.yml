@@ -269,9 +269,14 @@ jobs:
       # only croft-pwa runs is a check the other seventeen never invoke
       # (VERIFICATION.md, "a check nothing invokes"). Running them first means a
       # broken classifier fails loudly instead of waving findings through.
+      # `-m unittest <module>` and NOT `python3 test_dep_gate.py`: the script form
+      # collects whatever TestCases exist when `unittest.main()` executes, so tests
+      # appended below that call are silently skipped. Measured 2026-08-29 — the script
+      # form ran 23 of 48 while the module form ran all 48, and the 25 it skipped were
+      # the ones under review. The module form imports before it collects.
       - name: Test the classifier
         working-directory: .security-tooling/.github/scripts
-        run: python3 test_dep_gate.py
+        run: python3 -m unittest test_dep_gate -v
 
       - name: Install osv-scanner (pinned, checksum-verified)
         run: |
