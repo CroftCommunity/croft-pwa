@@ -9,6 +9,12 @@ Started 2026-08-29; earlier history is in `git log`.
 
 ## 2026-08
 
+- 2026-08-29 The atproto page signs in through the workspace **sign-in sheet**: "Choose
+  your atmo provider" — Bluesky, Blacksky and EuroSky with Create account + Sign in,
+  Northsky (invite only) and a handle field behind **Another provider**. A provider tap
+  starts OAuth at that server with no handle; the DID comes from the token. The CSP now
+  admits each registered provider. `docs/DESIGN.md` grew into the design standard
+  (foundations · components · flows · copy) with this flow as its first pattern.
 - 2026-08-29 The dependency gate decides **inbound licences** as well as CVEs, from one
   osv-scanner run and one rung-2 verdict: a licence term attaches on distribution, so
   "does this reach a shipped artifact" answers both. All 40 licence violations here are

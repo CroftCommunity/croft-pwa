@@ -99,8 +99,12 @@ test.describe('OAuth sign-in (PKCE + PAR + DPoP)', () => {
     );
 
     await page.goto('/atproto.html');
-    await page.locator('[data-testid="signin-handle-input"]').fill('alice.test');
-    await page.locator('[data-testid="signin-button"]').click();
+    // The handle path lives on the sheet's "Another provider" panel
+    // (tests/e2e/signin-sheet.spec.ts owns the sheet itself).
+    await page.locator('[data-testid="open-signin-sheet"]').click();
+    await page.locator('[data-provider-other]').click();
+    await page.locator('[data-provider-handle]').fill('alice.test');
+    await page.locator('[data-provider-handle-go]').click();
 
     await expect(page.locator('[data-testid="signin-did"]')).toContainText(DID);
     // The callback params are stripped so a refresh doesn't replay the exchange.
@@ -117,7 +121,7 @@ test.describe('OAuth sign-in (PKCE + PAR + DPoP)', () => {
 
   test('a normal load is not treated as a callback', async ({ page }) => {
     await page.goto('/atproto.html');
-    await expect(page.locator('[data-testid="signin-button"]')).toBeVisible();
+    await expect(page.locator('[data-testid="open-signin-sheet"]')).toBeVisible();
     await expect(page.locator('[data-testid="signin-did"]')).toHaveCount(0);
   });
 

@@ -17,6 +17,7 @@ import {
   type PendingAuth,
 } from '../atproto/oauth/client';
 import { wrapKey, unwrapKey } from '../crypto/vault';
+import { openSignInSheet } from '../signin/sheet';
 
 // The demo note lexicon (owned namespace, TID rkey, no PII — see docs/ATPROTO.md).
 const NOTE_COLLECTION = 'ing.croft.croftpwa.note';
@@ -85,25 +86,17 @@ interface SignInUi {
 function signInSection(): SignInUi {
   const panel = el('section', 'panel');
   panel.append(
-    el('h2', undefined, 'Sign in with your PDS'),
+    el('h2', undefined, 'Sign in with an atmo provider'),
     el(
       'p',
       undefined,
       'OAuth for a public client — authorization-code + PKCE + a pushed ' +
         'authorization request (PAR), with DPoP-bound tokens. No password crosses ' +
-        'this page: you authenticate on your own PDS, and only a DPoP-bound access ' +
-        'token comes back.',
+        'this page: you authenticate on your own provider, and only a DPoP-bound ' +
+        'access token comes back. The sheet below is the workspace sign-in pattern ' +
+        '(docs/DESIGN.md § Flows › Sign in): pick a provider, or bring a handle.',
     ),
   );
-
-  const input = el('input');
-  input.type = 'text';
-  input.value = 'bsky.app';
-  input.setAttribute('aria-label', 'atproto handle to sign in with');
-  input.setAttribute('data-testid', 'signin-handle-input');
-
-  const btn = el('button', 'btn btn-primary', 'Sign in');
-  btn.setAttribute('data-testid', 'signin-button');
 
   const out = el('div', 'atproto-result');
   out.setAttribute('data-testid', 'signin-result');
@@ -119,16 +112,18 @@ function signInSection(): SignInUi {
     out.replaceChildren(el('p', 'mono', message));
   };
 
-  btn.addEventListener('click', () => {
-    const handle = input.value.trim();
-    out.replaceChildren(el('p', 'mono', 'Resolving your PDS and starting sign-in…'));
+  // One seam for every choice the sheet offers: a provider entryway (server
+  // first, DID from the token) or a handle (identity first, login_hint sent).
+  const start = (target: string, options: { prompt?: 'create' } = {}): void => {
+    out.replaceChildren(el('p', 'mono', 'Starting sign-in…'));
     void (async () => {
       try {
-        const { authorizeUrl, pending } = await beginAuthorization(handle, {
-          clientId: OAUTH_CLIENT_ID,
-          redirectUri: redirectUri(),
-          scope: OAUTH_SCOPE,
-        });
+        const { authorizeUrl, pending } = await beginAuthorization(
+          target,
+          { clientId: OAUTH_CLIENT_ID, redirectUri: redirectUri(), scope: OAUTH_SCOPE },
+          {},
+          options,
+        );
         sessionStorage.setItem(OAUTH_PENDING_KEY, JSON.stringify(pending));
         window.location.href = authorizeUrl;
       } catch (err) {
@@ -136,10 +131,19 @@ function signInSection(): SignInUi {
         log.warn('oauth beginAuthorization failed', err);
       }
     })();
+  };
+
+  const open = el('button', 'btn btn-primary', 'Sign in or create an account');
+  open.setAttribute('data-testid', 'open-signin-sheet');
+  open.addEventListener('click', () => {
+    openSignInSheet(panel, {
+      onChoose: (target, options) => start(target, options),
+      onEmptyHandle: () => showError('Enter your handle — for example you.example.com.'),
+    });
   });
 
   const controls = el('div', 'atproto-controls');
-  controls.append(input, btn);
+  controls.append(open);
   panel.append(controls, out);
   return { panel, showSession, showError };
 }

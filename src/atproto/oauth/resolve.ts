@@ -64,6 +64,25 @@ export async function fetchAuthServerMeta(authServer: string, fetchImpl: typeof 
   };
 }
 
+/** True for a provider ENTRYWAY (an https origin) rather than a handle or DID. */
+export function isEntryway(target: string): boolean {
+  return /^https:\/\//.test(target);
+}
+
+/**
+ * A provider start: no handle, so no DID yet — the person picked a server, and
+ * the identity arrives in the token's `sub`. Discovery runs from the entryway
+ * as if it were the PDS (an entryway answers oauth-protected-resource for its
+ * whole fleet), and `did` is left empty for completeAuthorization to fill.
+ */
+export async function resolveEntryway(entryway: string, deps: ResolveDeps = {}): Promise<ResolvedIdentity> {
+  const fetchImpl = fetchOf(deps);
+  const pds = entryway.replace(/\/+$/, '');
+  const authServer = await authServerFromPds(pds, fetchImpl);
+  const meta = await fetchAuthServerMeta(authServer, fetchImpl);
+  return { did: '', pds, authServer, meta };
+}
+
 /** Full chain: a handle or DID → everything needed to start the OAuth flow. */
 export async function resolveIdentity(handleOrDid: string, deps: ResolveDeps = {}): Promise<ResolvedIdentity> {
   const fetchImpl = fetchOf(deps);

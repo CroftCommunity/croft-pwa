@@ -113,7 +113,7 @@ coverage.
 - `src/sw.ts` + `src/sw-nav.ts` — service worker; the routing decision is a pure,
   unit-tested function separate from the worker shell.
 - `tools/serve.mjs` — the zero-dep static server the e2e gate drives.
-- `docs/` — DESIGN (brand), SECURITY (CSP/SRI/threat posture), PRACTICES.
+- `docs/` — DESIGN (the workspace design standard: foundations · components · flows · copy; the sign-in sheet is its reference flow), SECURITY (CSP/SRI/threat posture), PRACTICES.
 - `plans/` — dated phase plans. `RUN-*-SUMMARY.md` — per-run evidence.
 
 ## Roadmap (phases)

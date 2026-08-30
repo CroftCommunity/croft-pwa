@@ -19,9 +19,11 @@ script-src 'self' 'sha256-<pre-paint theme init>'
 - **No `unsafe-inline`.** The one inline script (the pre-paint theme resolver) is
   admitted by its sha256, computed at build over the exact bytes injected — so
   the hash can never drift from the script.
-- **`connect-src 'self'`** for now; it widens to the atproto origins (the AppView,
-  `plc.directory`, `bsky.social`, `*.host.bsky.network`) when the PDA module lands
-  in Phase 3.
+- **`connect-src 'self'`** plus the atproto origins (the AppView, `plc.directory`,
+  `bsky.social`, `*.host.bsky.network`) since the PDA module landed in Phase 3, plus
+  the sign-in sheet's registered provider entryways, derived at build time from
+  `src/signin/providers.json` so the allowlist and the sheet cannot disagree
+  (`docs/ATPROTO.md` § CSP).
 - **`frame-ancestors` is intentionally absent** from the meta CSP — browsers
   ignore it there (it must be an HTTP header). The static host applies it. This
   is noted so a reviewer does not read the omission as a gap.
