@@ -284,6 +284,18 @@ class FirstPartyProvenance(unittest.TestCase):
         self.assertFalse(is_first_party("git+https://github.com/someone-else/x.git?rev=a#a",
                                         org="CroftCommunity"))
 
+    def test_the_org_name_must_be_a_path_SEGMENT_not_a_substring(self):
+        # Found by mutation testing: relaxing `/{org}/` to a bare `in` check survived
+        # the suite. A fork or typosquat whose REPOSITORY is named CroftCommunity —
+        # github.com/someone-else/CroftCommunity — would then be laundered into
+        # first-party and have its UNKNOWN licence waved through.
+        self.assertFalse(
+            is_first_party("git+https://github.com/someone-else/CroftCommunity.git?rev=a#a",
+                           org="CroftCommunity"))
+        self.assertFalse(
+            is_first_party("git+https://github.com/CroftCommunity-mirror/x.git?rev=a#a",
+                           org="CroftCommunity"))
+
     def test_an_absent_package_yields_no_source_rather_than_raising(self):
         self.assertIsNone(cargo_source_for(CARGO_LOCK, "not-here", "9.9.9"))
 
