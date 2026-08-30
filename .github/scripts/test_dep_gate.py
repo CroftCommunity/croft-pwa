@@ -202,8 +202,6 @@ class NearestConfig(unittest.TestCase):
         self.assertIsNone(nearest_config("a/b/Cargo.lock", lambda p: False))
 
 
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
 
 
 # ---------------------------------------------------------------------------
@@ -391,3 +389,37 @@ class ScanOutcome(unittest.TestCase):
     def test_an_unrecognised_code_fails_closed(self):
         self.assertEqual(scan_outcome(2), "failed")
         self.assertEqual(scan_outcome(-9), "failed")
+
+
+class TheSuiteRunsWhicheverWayItIsInvoked(unittest.TestCase):
+    """`python3 test_dep_gate.py` and `python3 -m unittest test_dep_gate` must run the
+    SAME tests, and on 2026-08-29 they did not.
+
+    `unittest.main()` collects the TestCases defined at the moment it executes, so 24
+    tests appended below it were invisible to the script form while the module form
+    saw all 47. The workflow runs the script form. The tests were written, watched
+    fail, watched pass — and then never ran in CI, which is the exact failure this
+    file's own docstring is about, one level up.
+
+    The workflow now uses the module form, which imports before it collects and so
+    cannot be fooled by ordering. This test is the belt: it fails if any TestCase is
+    ever again defined after the `__main__` guard, whichever form is used to run it.
+    """
+
+    def test_no_test_case_is_defined_below_the_main_guard(self):
+        import re as _re
+        with open(__file__, encoding="utf-8") as fh:
+            source = fh.read()
+        guard = source.find('if __name__ == "__main__":')
+        if guard == -1:
+            return  # no guard, no ordering hazard
+        below = source[guard:]
+        stragglers = _re.findall(r"^class (\w+)\(unittest\.TestCase\)", below, _re.M)
+        self.assertEqual(
+            stragglers, [],
+            "these TestCases are defined after the __main__ guard and will not run "
+            f"under `python3 {__file__.split('/')[-1]}`: {stragglers}")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
