@@ -91,6 +91,13 @@ jobs:
           fetch-depth: 0
 
       - name: Install gitleaks (pinned)
+        env:
+          # Through `env:` and not `${{ }}` inside the script: a caller-supplied input
+          # expanded directly into a shell command is a template-injection site, and this
+          # workflow takes inputs from eighteen repos (zizmor template-injection,
+          # 2026-08-29). As an environment variable the value is data the shell reads,
+          # never text the runner pastes into the program before bash sees it.
+          GITLEAKS_VERSION: ${{ inputs.gitleaks-version }}
         run: |
           set -euo pipefail
           # --retry is not politeness. The first CI run of this job died on
@@ -100,7 +107,7 @@ jobs:
           # required for -f: without it curl only retries "transient" HTTP codes and
           # not connection resets.
           CURL="curl -sSfL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15"
-          V="${{ inputs.gitleaks-version }}"
+          V="$GITLEAKS_VERSION"
           B="https://github.com/gitleaks/gitleaks/releases/download/v${V}"
           # Download under the EXACT published filename: `sha256sum -c` reads the name
           # out of the checksum line and opens that path, so renaming on the way in
@@ -279,10 +286,12 @@ jobs:
         run: python3 -m unittest test_dep_gate -v
 
       - name: Install osv-scanner (pinned, checksum-verified)
+        env:
+          OSV_SCANNER_VERSION: ${{ inputs.osv-scanner-version }}
         run: |
           set -euo pipefail
           CURL="curl -sSfL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15"
-          V="${{ inputs.osv-scanner-version }}"
+          V="$OSV_SCANNER_VERSION"
           B="https://github.com/google/osv-scanner/releases/download/v${V}"
           $CURL -O "${B}/osv-scanner_linux_amd64"
           $CURL -O "${B}/osv-scanner_SHA256SUMS"
