@@ -391,6 +391,59 @@ class ScanOutcome(unittest.TestCase):
         self.assertEqual(scan_outcome(-9), "failed")
 
 
+class AdvisoryPathsCannotSilenceTheWholeGate(unittest.TestCase):
+    """`advisory-paths` is CALLER-declared and unbounded, which is the widest trust
+    boundary this gate has: a repo states which of its own subtrees ship nothing, and the
+    gate believes it. Found by the Phase 6 authored-code pass over the rollout plan
+    (SUPPLY-CHAIN.md rule 11) — the question "what stops a caller declaring everything
+    unshipped?" had no recorded answer.
+
+    It turns out there IS a limit, and it was accidental rather than designed: the match
+    is a DIRECTORY prefix, formed by appending "/" to the declared path. A lockfile at the
+    repo root has no directory component, so no declared prefix can ever cover it. The
+    root manifest — the one that describes what the repo actually ships — is therefore
+    unsilenceable, while a nested subtree can be declared away, which is exactly the split
+    the input is for.
+
+    Written down and pinned here because an invariant nobody has stated is one a later
+    refactor removes without noticing. The residual risk is real and accepted: a caller
+    CAN silence a nested lockfile it should not. That is visible in the caller's own
+    tracked file and reviewed like any other change.
+    """
+
+    def root(self, *advisory_paths):
+        return classify(
+            ecosystem="npm", name="vite", version="5.4.21",
+            lockfile="package-lock.json", dependency_groups=None,
+            advisory_paths=list(advisory_paths),
+        )
+
+    def test_no_declared_path_can_silence_a_root_lockfile(self):
+        for p in ("", ".", "/", "./", "*", "src", "package-lock.json", "package-lock.json/"):
+            self.assertEqual(self.root(p).verdict, "block", f"advisory-path={p!r}")
+
+    def test_nor_can_several_of_them_together(self):
+        self.assertEqual(self.root(".", "/", "*", "").verdict, "block")
+
+    def test_a_nested_lockfile_is_still_declarable_which_is_the_point(self):
+        v = classify(
+            ecosystem="npm", name="vite", version="5.4.21",
+            lockfile="alpha/experiments/thing/package-lock.json", dependency_groups=None,
+            advisory_paths=["alpha/experiments/"],
+        )
+        self.assertEqual(v.verdict, "note")
+
+    def test_a_prefix_must_end_at_a_directory_boundary(self):
+        # "alpha/exp" must not swallow "alpha/experiments/..." — a declared path is a
+        # directory, not a string prefix, or one declaration silences its siblings.
+        v = classify(
+            ecosystem="npm", name="vite", version="5.4.21",
+            lockfile="alpha/experiments/thing/package-lock.json", dependency_groups=None,
+            advisory_paths=["alpha/exp"],
+        )
+        self.assertEqual(v.verdict, "block")
+
+
 class TheSuiteRunsWhicheverWayItIsInvoked(unittest.TestCase):
     """`python3 test_dep_gate.py` and `python3 -m unittest test_dep_gate` must run the
     SAME tests, and on 2026-08-29 they did not.
