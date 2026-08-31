@@ -29,6 +29,9 @@ for (const p of PROVIDERS) {
     // The build allowlists each ENTRYWAY in connect-src on the strength of the
     // provider being its own authorization server. If that stops being true,
     // discovery would pass and PAR would be CSP-refused — on a phone, silently.
+    // An ENTRYWAY (bsky.social) answers 404 here — it is the issuer, and only its
+    // PDS hosts serve this document; discovery then reads the entryway as the
+    // issuer, which the oauth-authorization-server assertion above already covers.
     const pr = await request.get(`${p.entryway}/.well-known/oauth-protected-resource`, { timeout: 15_000 });
     if (pr.ok()) {
       const servers = ((await pr.json()) as { authorization_servers?: string[] }).authorization_servers ?? [];
