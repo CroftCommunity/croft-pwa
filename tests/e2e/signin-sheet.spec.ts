@@ -121,10 +121,17 @@ for (const theme of ['light', 'dark'] as const) {
 // 2026-08-29), so a provider the build forgot to allowlist in connect-src fails
 // here with a CSP refusal instead of on a phone. The PAR body is what proves
 // the words on the button.
+// Entryways that serve only the issuer document, never oauth-protected-resource
+// (live shape, harvested 2026-08-30): bsky.social is the issuer for a fleet of PDS
+// hosts, and only those serve it. A single-host provider names itself there.
+const ISSUER_ONLY_ENTRYWAYS: ReadonlySet<string> = new Set(['https://bsky.social']);
+
 async function mockProvider(page: Page, entryway: string): Promise<{ par: () => URLSearchParams[] }> {
   const bodies: URLSearchParams[] = [];
   await page.route(`${entryway}/.well-known/oauth-protected-resource`, (route) =>
-    route.fulfill({ json: { authorization_servers: [entryway] } }),
+    ISSUER_ONLY_ENTRYWAYS.has(entryway)
+      ? route.fulfill({ status: 404, contentType: 'text/html', body: 'Cannot GET /.well-known/oauth-protected-resource' })
+      : route.fulfill({ json: { authorization_servers: [entryway] } }),
   );
   await page.route(`${entryway}/.well-known/oauth-authorization-server`, (route) =>
     route.fulfill({

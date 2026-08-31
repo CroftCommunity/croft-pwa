@@ -9,6 +9,13 @@ Started 2026-08-29; earlier history is in `git log`.
 
 ## 2026-08
 
+- 2026-08-30 Sign in at **Bluesky** from the sheet works. The Bluesky row failed with
+  "protected-resource failed: 404": `bsky.social` is an entryway — the sign-in server for a
+  fleet of data servers — and does not publish the document a single-host provider (Blacksky,
+  EuroSky, Northsky) does. Discovery now reads the entryway as the sign-in server when that
+  document is missing, the order the reference atproto client uses. This file is the
+  reference `fun` ported; fun carries the same fix (fun#78). (signin-entryway)
+
 - 2026-08-29 The atproto page signs in through the workspace **sign-in sheet**: "Choose
   your atmo provider" — Bluesky, Blacksky and EuroSky with Create account + Sign in,
   Northsky (invite only) and a handle field behind **Another provider**. A provider tap
