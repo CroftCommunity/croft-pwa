@@ -2,15 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** Pass 2 complete (gap analysis against the code, 2026-09-08 — V16–V30 added, gate
-order and `files` corrected, 6b split into 6b/6b-ii/6b-iii, OQ4 resolved, OQ6–OQ9 raised);
-**Pass 3 complete (quality gates, 2026-09-08 — V31–V37 added; OQ6–OQ9 decided by the owner
-and folded in; RED→GREEN order on every phase; logging via an injected `Logger`; mutation
-checkpoints M1–M3; file counts corrected — 1d-ii, 6a-ii, 6a-iii inserted; landing groups
-G1–G7 with RUN summaries and claims) — ready to execute at Phase 1a.** D1–D3 decided by the
-owner (§ Decisions); OQ1–OQ9 severities confirmed by the owner 2026-09-08. Phase-gated items
-still open at their phase: OQ1 (2a, generator vs `fast-check`), OQ2 (M1, stryker), OQ3 (3d,
-the live account) — dependency approvals and an account choice, none blocking 1a.
+**Status:** EXECUTING — 1a, 1b shipped 2026-09-08; 1c next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
 
 Format note: this plan follows the `phase-plan` skill's template (Problem · Reasoning ·
 Verified Assumptions · Documentation Impact · Concurrency Map · Phases with call chain,
@@ -18,6 +10,13 @@ wiring test, read/write-sets, done-when, validation · Open Questions · Review 
 the workspace's plan conventions (`CroftC/.claude/TRACKING.md`: dated name without
 ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer wins
 (PATTERN.md precedence) — that is why the filename carries no ordinal.
+
+## Outcome Summary
+
+| phase | outcome | commit | note |
+|---|---|---|---|
+| 1a | ✅ | `cdb45cf` | `build:lib` emits `lib/pds-walker/`; gate reordered with it first; both predicted REDs observed |
+| 1b | ✅ | `ca7f6bc` | `lib/` ignored by git (RED observed) and eslint (defensive — RED could not fire, V11 corrected); CLAUDE.md gate wording |
 
 ## Problem Statement
 
@@ -118,6 +117,7 @@ All probes run 2026-09-08 from this machine; scratch package under the session s
 | V9 | croft-pwa's page registry is the `PAGES` array in `build.mjs` (`html`, `entry`, `jsToken`, `sriToken`); every entry is bundled, hashed, SRI-stamped | `build.mjs` § "Each destination" (`const PAGES = [`) |
 | V10 | Unit tests live in `tests/unit/**/*.test.ts` under vitest with `environment: 'node'`; the fake-fetch pattern is `fakeFetch(routes)` in `tests/unit/atproto-read.test.ts` | `vitest.config.ts`; the test file's head |
 | V11 | ESLint ignores are `dist/**, node_modules/**, test-results/**, playwright-report/**, .claude/**` — `lib/**` is not ignored yet; `.gitignore` ignores `dist/` not `lib/` | `eslint.config.js` line 10; `.gitignore` |
+| V11-corr | **Corrected 2026-09-08 (Phase 1b):** an un-ignored `lib/` does NOT trip lint — the flat config's blocks each carry a `files:` glob and none matches `lib/**/*.js`, so `eslint .` never opened it. The ignore is defensive only | `eslint.config.js` § `files:` lists (lines 14, 29, 38, 48); `npm run lint` exit 0 with `lib/` present before the edit |
 | V12 | CISS's `release.yml` is the tag-gated template: on `tags: ["v*"]`, derive the version from the tag, compare to the manifest, `exit 1` on mismatch, then `gh release create` + `gh release upload` | `CISS/.github/workflows/release.yml` (steps "verify tag matches workspace version", release upload) |
 | V13 | croft-pwa's `ci.yml` deploys only `needs: gate` and `if: github.ref == 'refs/heads/main'`; `preview.yml` deploys PR previews | `.github/workflows/ci.yml` lines 71–72 |
 | V14 | PDS-direct calls needed by the transport are unauthenticated with CORS `*`: `listRecords` (0.2 s/page, cursor-chained), `getLatestCommit` (0.13 s), `plc.directory` DID docs; rate limit 3,000 / 5 min per host per IP with `RateLimit-*` headers exposed | research doc § 3.1–3.2 (live probes 2026-09-08) |
@@ -295,7 +295,7 @@ are gated on the phases that would add the dependency.
 
 ---
 
-### Phase 1a: the build emits the library
+### Phase 1a: the build emits the library — ✅ SHIPPED (`cdb45cf`)
 
 **Goal:** `npm run build:lib` produces `lib/pds-walker/index.js` + `index.d.ts` from
 `src/pds-walker/`, and the gate runs it.
@@ -344,7 +344,9 @@ only, run again — expected `error TS18003: No inputs were found in config file
 and read the gate's full output (VERIFICATION.md: read the count, not the tick).
 **Logging:** none — build-time only.
 
-### Phase 1b: the emitted tree is ignored where it must be
+### Phase 1b: the emitted tree is ignored where it must be — ✅ SHIPPED (`ca7f6bc`)
+
+**Delivered (2026-09-08):** RED 2 (eslint errors in `lib/`) did not fire — `eslint .` lints only the config's `files` globs (`src/**/*.ts`, `tests/**/*.ts`, `*.config.ts`, named `.mjs`/`.js` sets), so `lib/*.js` was never in scope. The `lib/**` ignore landed anyway as a defence against a future broader glob; it has no RED and is recorded as reasoned, not proven. V11 corrected.
 
 **Goal:** `lib/` never enters git and never trips lint.
 **Changes:**
