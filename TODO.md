@@ -97,15 +97,17 @@ Registered by pointer (the need sits inside item 1 above):
 
 ## 3. Become the package — reference AND library (`CroftC/.claude/SHARED-CODE.md` rule 2)
 
-Plan: `plans/2026-09-08-plan-pds-walker.md` (Phase 0 is this section's first three boxes).
+Plan: `plans/2026-09-08-plan-pds-walker.md` (Phases 1a–1c of that plan are this section's first three boxes; landed as G1).
 
 Owner decision 2026-09-08: croft-pwa is the library home for shared PWA code, and **the
 repo root is the package** (npm installs from a git commit and runs `prepare`, but cannot
 install a subfolder). Until this lands, audit check 47e NOTEs the repo every run.
 
-- [ ] `package.json`: an `exports` map naming the public modules, a `files` list naming only
+- [x] `package.json`: an `exports` map naming the public modules, a `files` list naming only
       library code (the site stays here as the reference app but is not what a consumer
-      installs), and a `prepare` script that builds what `exports` points at.
+      installs), and a `prepare` script that builds what `exports` points at. *Landed 2026-09-08
+      (G1: 1a–1d-ii). `private: true` stays: it blocks `npm publish` only; a git install at a
+      pinned commit is unaffected (plan V6).*
 - [ ] The reference site imports the library through its own export path, not a relative
       `./src/...` import — that is what proves the export works (rule 2's last clause;
       uncheckable by script, so it is review).
