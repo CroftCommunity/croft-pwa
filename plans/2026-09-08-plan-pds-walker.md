@@ -2,7 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** EXECUTING — 1a, 1b shipped 2026-09-08; 1c next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
+**Status:** EXECUTING — 1a, 1b, 1c shipped 2026-09-08; 1d next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
 
 Format note: this plan follows the `phase-plan` skill's template (Problem · Reasoning ·
 Verified Assumptions · Documentation Impact · Concurrency Map · Phases with call chain,
@@ -16,6 +16,7 @@ ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer
 | phase | outcome | commit | note |
 |---|---|---|---|
 | 1a | ✅ | `cdb45cf` | `build:lib` emits `lib/pds-walker/`; gate reordered with it first; both predicted REDs observed |
+| 1c | ✅ | `11694f9` | `exports` + `files: ["lib"]` + `prepare`; V23 confirmed (vitest resolves the self-name); 47e silent; tarball + git+file installs proven |
 | 1b | ✅ | `ca7f6bc` | `lib/` ignored by git (RED observed) and eslint (defensive — RED could not fire, V11 corrected); CLAUDE.md gate wording |
 
 ## Problem Statement
@@ -372,7 +373,9 @@ index.js` (the type-checked rule set parses it; record the first rule name print
 the two edits; both commands go quiet. The `CLAUDE.md` wording has no test — read the diff.
 **Logging:** none.
 
-### Phase 1c: the export path exists, and the audit stops noting it
+### Phase 1c: the export path exists, and the audit stops noting it — ✅ SHIPPED (`11694f9`)
+
+**Delivered (2026-09-08):** RED text was a third shape — vitest `Failed to load url croft-pwa/pds-walker … Does the file exist?` — but step 2 (`exports` alone) turned the import case GREEN, so **V23 holds** and the `new Function` fallback was not needed; later tests import through the export path as planned. Both out-of-harness proofs passed: (a) `npm pack` → `npm install <tgz>` → `0.1.0`, tarball holds `lib/`, `LICENSE`, `README.md`, `package.json`; (b) `npm install git+file:///…/croft-pwa#11694f9` → `prepare` ran, `lib/pds-walker/` present, lockfile resolved to the sha → `0.1.0`. (A first attempt at (b) resolved `main` instead — the sha was read from a non-repo cwd and came back empty; recorded so nobody repeats it.) One gate run had an image-load race in `user-guide.spec.ts`; the spec passed alone and the full re-run was green (19 files / 123 unit, 107 e2e).
 
 **Goal:** `import 'croft-pwa/pds-walker'` resolves inside the repo and for a git consumer;
 check 47e is silent.
