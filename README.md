@@ -16,7 +16,8 @@ Two things at once:
    content via a companion browser extension). Each is a real page in the site.
 2. **A reference implementation** — the smallest working app that exercises
    every standard and proves it against the gate. Its chassis is what a new
-   Croft PWA copies to start.
+   Croft PWA consumes as a package (`croft-pwa/pds-walker`, pinned to a commit —
+   `CroftC/.claude/SHARED-CODE.md`) or copies to start.
 
 It supersedes the older, generic `peadoubleueh` PWA notes, and distills the
 conventions proven in [arecipe](https://arecipe.app/) (the working method and
@@ -27,7 +28,7 @@ brand-token discipline) and [skylite](https://github.com/CroftCommunity/skylite)
 
 ```
 npm install         # refuses on the wrong Node — see .nvmrc + .npmrc
-npm run test        # the gate: lint · typecheck · unit · build · e2e
+npm run test        # the gate: build:lib · lint · typecheck · unit · build · e2e
 npm run build       # → dist/  (self-contained static site)
 npm run serve       # serve dist/ at http://localhost:4173
 ```
