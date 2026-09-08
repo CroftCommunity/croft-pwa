@@ -2,7 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** EXECUTING — 1a, 1b, 1c shipped 2026-09-08; 1d next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
+**Status:** EXECUTING — G1 (1a, 1b, 1c, 1d, 1d-ii) shipped 2026-09-08 on `claude/pds-walker-plan`; landing G1 (RUN summary, claim, PR). 2a next after G1 lands. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
 
 Format note: this plan follows the `phase-plan` skill's template (Problem · Reasoning ·
 Verified Assumptions · Documentation Impact · Concurrency Map · Phases with call chain,
@@ -16,6 +16,8 @@ ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer
 | phase | outcome | commit | note |
 |---|---|---|---|
 | 1a | ✅ | `cdb45cf` | `build:lib` emits `lib/pds-walker/`; gate reordered with it first; both predicted REDs observed |
+| 1d | ✅ | `a5c5f52` | `release-pds-walker.yml` (tag == `VERSION`, gate, pack → renamed asset + sha256, notes from the changelog section); `Contexts: site · pds-walker` + 12 entries prefixed (RED 12 FLAGs → quiet); README |
+| 1d-ii | ✅ | `fbbf7af` | `ci.yml` comment; TODO § 3 box 1 + `private: true` why-line |
 | 1c | ✅ | `11694f9` | `exports` + `files: ["lib"]` + `prepare`; V23 confirmed (vitest resolves the self-name); 47e silent; tarball + git+file installs proven |
 | 1b | ✅ | `ca7f6bc` | `lib/` ignored by git (RED observed) and eslint (defensive — RED could not fire, V11 corrected); CLAUDE.md gate wording |
 
@@ -412,7 +414,9 @@ is what a consumer gets. If V23 fails and the fallback fires, later tests import
 exercised) and this file alone keeps the native-import proof of the map.
 **Logging:** none.
 
-### Phase 1d: release plumbing (D3) and the docs that name the shape
+### Phase 1d: release plumbing (D3) and the docs that name the shape — ✅ SHIPPED (`a5c5f52`)
+
+**Delivered (2026-09-08):** as specified. RED: `Contexts:` alone → 12 check-40 FLAGs (one per entry), prefixing → quiet. The verify block, extracted from the YAML text, refused `pds-walker-v9.9.9` ("tag says 9.9.9, VERSION says 0.1.0", exit 1) and accepted `pds-walker-v0.1.0`. One addition the spec did not name: `npm pack` names the tarball by `package.json`'s version (the site's clock), so the workflow renames it to `pds-walker-v<tag>.tgz` before it becomes an asset — otherwise every release asset would be called `croft-pwa-0.1.0.tgz`. The dry-tag Broad step is recorded in the Review Log (G1 landing).
 
 **Goal:** a tag `pds-walker-vX.Y.Z` can only release when it equals `VERSION`, the changelog
 is ready for two clocks, and the README says the repo is a package.
@@ -466,7 +470,9 @@ and exit 1; `TAG=pds-walker-v0.1.0 …` — exit 0. (3) `README.md`: read the di
 **Logging:** the workflow's compare step `echo`s both values on mismatch (the failure must be
 readable from the Actions log without re-running).
 
-### Phase 1d-ii: the gate's wording and the TODO ledger (inserted in Pass 3)
+### Phase 1d-ii: the gate's wording and the TODO ledger (inserted in Pass 3) — ✅ SHIPPED (`fbbf7af`)
+
+**Delivered (2026-09-08):** as specified; parity grep 2 → 3.
 
 **Goal:** the three places that describe the gate say the same thing, and `TODO.md` § 3
 records what the G1 landing did and why `private: true` stays.
@@ -1409,3 +1415,13 @@ than assumed: the dry-tag run uses the push trigger, which runs the file at the 
 **Confirmed ready:** yes — execute at Phase 1a. **Plan file:**
 `plans/2026-09-08-plan-pds-walker.md` (this worktree; absolute path
 `/Users/cpettet/git/chasemp/CroftC/worktrees/pds-walker/croft-pwa/plans/2026-09-08-plan-pds-walker.md`).
+- 2026-09-08 — **Execution, G1 (1a–1d-ii).** All five phases shipped on the branch with
+  their predicted REDs observed, except 1b's eslint RED, which could not fire (V11
+  corrected: the flat config never opened `lib/`). 1c's RED was a third shape (vitest
+  "Failed to load url") and `exports` alone turned it green, so V23 holds and the
+  `new Function` fallback was not used. Decision 2026-09-08: the workflow renames `npm
+  pack`'s tarball to `pds-walker-v<tag>.tgz` (npm names it by the site's version).
+  Verify-in-run: tarball install ✓, git+file install at `11694f9` with `prepare` ✓, dry tag
+  `pds-walker-v0.0.0-dry` refused at the compare step (run 34292595469, no release, tag
+  deleted). Evidence: `RUN-PDS-WALKER-01-SUMMARY.md`. Next: claim + PR for G1 (ask before
+  merge), then 2a.
