@@ -97,6 +97,8 @@ Registered by pointer (the need sits inside item 1 above):
 
 ## 3. Become the package — reference AND library (`CroftC/.claude/SHARED-CODE.md` rule 2)
 
+Plan: `plans/2026-09-08-plan-pds-walker.md` (Phase 0 is this section's first three boxes).
+
 Owner decision 2026-09-08: croft-pwa is the library home for shared PWA code, and **the
 repo root is the package** (npm installs from a git commit and runs `prepare`, but cannot
 install a subfolder). Until this lands, audit check 47e NOTEs the repo every run.
