@@ -7,6 +7,7 @@
 # Node / build
 node_modules/
 dist/
+lib/
 
 # Playwright
 /test-results/

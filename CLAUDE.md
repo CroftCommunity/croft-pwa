@@ -23,11 +23,12 @@ GitHub Pages.
 One command runs the full check, the same way CI does:
 
 ```
-npm run test          # lint · typecheck · unit (vitest) · build · e2e (playwright)
+npm run test          # build:lib · lint · typecheck · unit (vitest) · build · e2e (playwright)
 ```
 
-Sub-parts: `npm run lint`, `npm run typecheck`, `npm run unit`, `npm run build`,
-`npm run e2e`. The `@live` tier exists (`npm run e2e:live`, local only — see `docs/ATPROTO.md`; it arrived with the atproto module
+Sub-parts: `npm run build:lib` (emits the `croft-pwa/pds-walker` package to `lib/`, first
+because lint and typecheck resolve the self-name through it), `npm run lint`, `npm run typecheck`,
+`npm run unit`, `npm run build`, `npm run e2e`. The `@live` tier exists (`npm run e2e:live`, local only — see `docs/ATPROTO.md`; it arrived with the atproto module
 in Phase 3, gated behind `npm run e2e:live`).
 
 **CI runs this exact command**, and the shape of the workflow around it is
