@@ -2,7 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** DRAFT for owner review — decisions D1–D3 open (§ Decisions); no phase started.
+**Status:** DECIDED 2026-09-08 (D1–D3 taken by the owner, § Decisions) — ready to start at Phase 0; no phase started.
 
 ## Problem Statement
 
@@ -127,7 +127,18 @@ commit consumers can pin and the page that proves it.
 - RED first: a unit test that does `import('croft-pwa/pds-walker')` (Node resolves a package's own name through `exports`) and fails because nothing is there; GREEN with an empty `index.ts` exporting `VERSION`.
 - Gate: `build:lib` joins `npm test`; CI runs it on a fresh clone (the smoke shape that catches "green here, broken from a tarball").
 - Measure: `bash CroftC/.claude/bin/shared-code.sh croft-pwa` no longer prints the 47e NOTE.
-- Changelog: "croft-pwa is now also a package: `croft-pwa/pds-walker` …".
+- **Release plumbing (D3):** the library has its own clock, separate from the site's
+  `package.json` version (which stamps the site footer): `src/pds-walker/version.ts` exports
+  `VERSION`, and a `release-pds-walker.yml` workflow on tags `pds-walker-v*` gates
+  **tag == VERSION** (VERSIONING.md: a tag that disagrees with the manifest fails the
+  release), runs the full gate, and attaches `npm pack`'s tarball as the release asset.
+  `CHANGELOG.md` declares `Contexts: site · pds-walker`, every entry from then on carries
+  its prefix (check 40), and each release gets a `## [pds-walker X.Y.Z] — YYYY-MM-DD`
+  section in the same commit as the tag (check 38 reads exactly that heading; the site's
+  month sections stay as they are — one file, two clocks, which CHANGELOGS.md's
+  multi-context rule allows and no repo here has done yet, so the first release proves it).
+- Changelog: `- **pds-walker:** croft-pwa is now also a package …` under the current month,
+  and `[pds-walker 0.1.0]` when Phase 5 lands and the first tag is cut.
 
 ### Phase 1 — the pure core
 
@@ -204,9 +215,17 @@ poll. Not before the walker has a measured poll cost to compare against.
 
 ## Deployment
 
-- **The library:** a landed commit on `main` is the artifact; consumers pin its sha. No
-  tag namespace until a consumer outside the workspace exists (VERSIONING.md would then
-  ask for `pds-walker-vX.Y.Z` as a multi-artifact scheme) — recorded in D3.
+- **The library:** released by tag, `pds-walker-vX.Y.Z` (VERSIONING.md's multi-artifact
+  scheme — croft-pwa now ships two artifacts on two clocks), cut from `main` after the
+  landing that completes a release's scope; the workflow gates tag == `VERSION`, and the
+  changelog section is written in the tag's commit. Consumers still pin the **sha** of the
+  tagged commit (SHARED-CODE.md rule 1 — a tag is a name for a commit, and the pin must not
+  move if the tag ever does), and record the tag in their changelog line. First tag:
+  `pds-walker-v0.1.0` when Phase 5 lands (a page that proves the export is the release
+  criterion; Phases 0–4 land on `main` untagged as pre-release work).
+- **The pin register:** VERSIONING.md § Cross-repo pins gains a row — forage's
+  `croft-pwa` pin → the latest `pds-walker-v*` tag's commit; bump after a release; check 47c
+  is the reminder when it falls behind.
 - **The page:** croft-pwa's existing `deploy` job (needs the gate, `main` only, Pages).
 - **The record:** `CHANGELOG.md` entry per landing under the current month; consumers'
   changelogs record each pin bump ("pds-walker pinned to <sha>: …").
@@ -219,9 +238,9 @@ poll. Not before the walker has a measured poll cost to compare against.
 
 | id | question | options | recommendation | status |
 |---|---|---|---|---|
-| D1 | Does the library get a reference page on the site? | (a) yes, `rings.html`, public handle input; (b) library only, consumers prove it | (a) — every croft-pwa standard is a page, and the page is the deploy | **open** |
-| D2 | How does forage, which has no bundler, consume the package? | (a) pin + `vendor:sync` copy from `node_modules` + byte-equality test; (b) give forage a build step | (a) — rule 1 and rule 3 together, forage ships as it does today | **open** |
-| D3 | Versioning of the library | (a) sha pins only, no tags, until an external consumer; (b) `pds-walker-vX.Y.Z` tags from the first landing | (a) — a tag nobody consumes is a clock nobody winds | **open** |
+| D1 | Does the library get a reference page on the site? | (a) yes, `rings.html`, public handle input; (b) library only, consumers prove it | (a) — every croft-pwa standard is a page, and the page is the deploy | **(a) — owner, 2026-09-08** |
+| D2 | How does forage, which has no bundler, consume the package? | (a) pin + `vendor:sync` copy from `node_modules` + byte-equality test; (b) give forage a build step | (a) — rule 1 and rule 3 together, forage ships as it does today | **(a) — owner, 2026-09-08** |
+| D3 | Versioning of the library | (a) sha pins only, no tags, until an external consumer; (b) `pds-walker-vX.Y.Z` tags from the first landing | (a) was recommended; the owner chose (b): a number to talk about from day one, with the release workflow that VERSIONING.md requires of any tag | **(b) — owner, 2026-09-08**; plumbing in Phase 0, first tag at Phase 5 |
 
 Settled upstream, not re-opened here: TypeScript not wasm; croft-pwa as home; default
 rings; re-list on rev change; outer ring draws as it fills (research doc § 7).
@@ -229,3 +248,8 @@ rings; re-list on rev change; outer ring draws as it fills (research doc § 7).
 ## Review Log
 
 - 2026-09-08 — drafted from the research doc and SHARED-CODE.md; D1–D3 put to the owner.
+- 2026-09-08 — owner took D1 (a), D2 (a), D3 (b). D3 against the recommendation: tags
+  from the first landing. Consequence folded into Phase 0 (a library clock in
+  `version.ts`, a tag-gated release workflow, `Contexts:` in the changelog) and into
+  § Deployment (first tag at Phase 5; consumers pin the tagged commit's sha). Open
+  follow-up for CroftC: VERSIONING.md's pin table row, added when forage first pins.
