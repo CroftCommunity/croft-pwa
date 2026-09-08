@@ -94,3 +94,23 @@ Registered by pointer (the need sits inside item 1 above):
   when": the moment this repo claims install or offline behaviour a reader would expect to
   have been tested on iOS (the atproto/PDA module, the telemetry chapter). No iOS device is
   registered in the workspace yet; this row is what argues for one. [device: ios]
+
+## 3. Become the package — reference AND library (`CroftC/.claude/SHARED-CODE.md` rule 2)
+
+Owner decision 2026-09-08: croft-pwa is the library home for shared PWA code, and **the
+repo root is the package** (npm installs from a git commit and runs `prepare`, but cannot
+install a subfolder). Until this lands, audit check 47e NOTEs the repo every run.
+
+- [ ] `package.json`: an `exports` map naming the public modules, a `files` list naming only
+      library code (the site stays here as the reference app but is not what a consumer
+      installs), and a `prepare` script that builds what `exports` points at.
+- [ ] The reference site imports the library through its own export path, not a relative
+      `./src/...` import — that is what proves the export works (rule 2's last clause;
+      uncheckable by script, so it is review).
+- [ ] First export: the rev-gated ring walker
+      (`discovery/alpha/research/ring-walk-sans-relay-2026-09.md` § 6–7). Consumers pin
+      `github:CroftCommunity/croft-pwa#<sha>`: forage, pdsview, the social-tree site.
+- [ ] The eight `Ported from skylite` files (`src/atproto/oauth/*`, `src/atproto/read.ts`,
+      `src/crypto/vault.ts`, `src/crypto/sealedbox.ts`) are register rows in SHARED-CODE.md
+      § Register of copies. Once the package exists they become the canonical home and
+      bluebird + fun consume them; flip the register rows in the same landing.
