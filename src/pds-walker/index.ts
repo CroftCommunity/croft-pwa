@@ -5,3 +5,5 @@ export { rings, RING_IDS } from './core/rings';
 export type { Did, Rev, RepoSnapshot, RingId, Ring, Logger } from './core/rings';
 export { decide } from './core/revgate';
 export type { LatestRev, Verdict } from './core/revgate';
+export { defaultPolicy, resolvePolicy, due, ring2Targets } from './core/cadence';
+export type { Policy, PolicyOverrides } from './core/cadence';
