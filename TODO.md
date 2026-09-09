@@ -117,7 +117,7 @@ install a subfolder). Until this lands, audit check 47e NOTEs the repo every run
       `github:CroftCommunity/croft-pwa#<sha>`: forage, pdsview, the social-tree site. *Done
       2026-09-08 (G2–G5); first release `pds-walker-v0.1.0` (G7). No consumer has pinned it
       yet — forage's adoption is Phase 7 of the plan, under forage's own plan.*
-- [ ] **Deferred from the plan (2026-09-08):** Phase 7 — forage adopts the package (pin
+- [x] **Phase 7 done 2026-09-08 in forage** (`forage/plans/2026-09-08-plan-beta-pds-walker.md`: a Beta features switch; the tree vendored whole). ~~Deferred from the plan (2026-09-08): Phase 7 — forage adopts the package (pin
       `github:CroftCommunity/croft-pwa#6005f12c7c22f7807d54f587ef8960da1825638c`, the
       `pds-walker-v0.1.0` commit; the library is a tree with `.js` imports, so forage's
       `vendor:sync` copies `lib/` whole or the package grows a single-file bundle — decide in
