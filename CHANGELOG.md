@@ -11,6 +11,10 @@ Contexts: site · pds-walker
 
 ## 2026-09
 
+- 2026-09-08 **pds-walker:** the store lands — `Store` is the persistence seam, `memoryStore()`
+  for tests and scripts, `indexedDbStore(name)` for the browser, proven in a real Chromium
+  through the site's own CSP (snapshots survive a reload; the newer of two always wins).
+  (plan 2026-09-08, G4)
 - 2026-09-08 **pds-walker:** the fetch transport lands — `createFetchTransport()` resolves a
   DID to its PDS, reads a repo's rev, and lists its follows page by page, all unauthenticated,
   each honest on failure (an `unknown` with a readable reason, never a partial list), under a
