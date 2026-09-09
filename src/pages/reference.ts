@@ -58,6 +58,11 @@ const CHAPTERS: readonly Chapter[] = [
     title: 'atproto / PDA',
     blurb: 'Read the records, not the pages: resolve a handle to a DID to a PDS, live. (Read path; auth is next.)',
   },
+  {
+    href: 'rings.html',
+    title: 'Rings',
+    blurb: 'Your social rings, walked from the data servers directly; honest about what is stale and what is unknown.',
+  },
 ];
 
 function content(): HTMLElement {

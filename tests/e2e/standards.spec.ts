@@ -15,6 +15,7 @@ const INDEX_CHAPTERS = [
   ...GUIDE_CHAPTERS,
   { href: 'reader.html', title: 'Atmosphere reader' },
   { href: 'atproto.html', title: 'atproto / PDA' },
+  { href: 'rings.html', title: 'Rings' },
 ];
 
 test('the standards index links to every chapter', async ({ page }) => {
