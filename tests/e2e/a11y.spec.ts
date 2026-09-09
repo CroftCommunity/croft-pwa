@@ -21,6 +21,7 @@ const PAGES = [
   '/agent-method.html',
   '/content-fetch.html',
   '/metrics.html',  '/atproto.html',
+  '/rings.html',
   '/settings.html',
 ];
 
