@@ -17,8 +17,7 @@ const PAGE = 100;
 const hostOf = (pds: string): string => { try { return new URL(pds).host; } catch { return pds; } };
 const fetchOf = (deps: PdsDeps): typeof fetch => deps.fetchImpl ?? globalThis.fetch.bind(globalThis);
 
-async function getJson(url: string, deps: PdsDeps): Promise<{ ok: true; body: unknown } | { ok: false; reason: string }> {
-  const host = hostOf(url);
+async function getJson(url: string, host: string, deps: PdsDeps): Promise<{ ok: true; body: unknown } | { ok: false; reason: string }> {
   const doFetch = async (): Promise<Response> => {
     const r = await fetchOf(deps)(url, { headers: { accept: 'application/json' } });
     deps.limiter?.observe(host, r);
@@ -42,7 +41,7 @@ async function getJson(url: string, deps: PdsDeps): Promise<{ ok: true; body: un
 /** `com.atproto.sync.getLatestCommit` → the repo's current rev, or unknown. */
 export async function latestRev(pds: string, did: string, deps: PdsDeps = {}): Promise<Rev | Unknown> {
   const url = `${pds}/xrpc/com.atproto.sync.getLatestCommit?did=${encodeURIComponent(did)}`;
-  const r = await getJson(url, deps);
+  const r = await getJson(url, hostOf(pds), deps);
   if (!r.ok) return { unknown: `getLatestCommit ${r.reason}` };
   const body: unknown = r.body;
   const rev: unknown = typeof body === 'object' && body !== null && 'rev' in body ? body.rev : undefined;
@@ -61,7 +60,7 @@ export async function listFollows(pds: string, did: string, deps: PdsDeps = {}):
   for (let page = 1; ; page++) {
     const url = `${pds}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${FOLLOW}&limit=${PAGE}` +
       (cursor === undefined ? '' : `&cursor=${encodeURIComponent(cursor)}`);
-    const r = await getJson(url, deps);
+    const r = await getJson(url, hostOf(pds), deps);
     if (!r.ok) return { unknown: `listRecords ${r.reason} at page ${page}` };
     const raw: unknown = r.body;
     const body = typeof raw === 'object' && raw !== null ? (raw as { records?: unknown; cursor?: unknown }) : {};

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { latestRev, listFollows, type Logger } from 'croft-pwa/pds-walker';
-import { hostLimiter } from '../../src/pds-walker/transport/limiter';
+import { hostLimiter, defaultLogger } from '../../src/pds-walker/transport/limiter';
+import { vi } from 'vitest';
 
 // Phase 3c (plan 2026-09-08): the per-host limiter. The limiter is internal (3d's
 // createFetchTransport builds it), so it is constructed from its module here and OBSERVED
@@ -70,6 +71,29 @@ describe('hostLimiter — no more than perHost in flight per host', () => {
   });
 });
 
+describe('defaultLogger — the posture of src/log.ts without the browser switch', () => {
+  it('warn and error reach the console tagged [pds-walker]; debug and info are silent', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const debug = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    const l = defaultLogger();
+    l.debug('a'); l.info('b'); l.warn('c', 1); l.error('d');
+    expect(warn).toHaveBeenCalledWith('[pds-walker]', 'c', 1);
+    expect(error).toHaveBeenCalledWith('[pds-walker]', 'd');
+    expect(logSpy).not.toHaveBeenCalled(); expect(info).not.toHaveBeenCalled(); expect(debug).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+  it('with no options, a pause really waits on the clock (the default sleep is a timer)', async () => {
+    const limiter = hostLimiter({ log: recordingLogger() });
+    const t0 = Date.now();
+    limiter.observe('h.example', new Response(LATEST, { status: 200, headers: { 'ratelimit-remaining': '0', 'ratelimit-reset': String((t0 + 30) / 1000) } }));
+    await limiter.run('h.example', () => Promise.resolve(1));
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(20);
+  });
+});
+
 describe('hostLimiter — RateLimit headers pause a host until reset', () => {
   const resetAt = 1_000_000 + 5_000; // epoch ms; the header carries epoch SECONDS
   const headersWith = (remaining: number) => ({ 'ratelimit-remaining': String(remaining), 'ratelimit-reset': String(resetAt / 1000), 'ratelimit-limit': '3000' });
@@ -100,6 +124,32 @@ describe('hostLimiter — RateLimit headers pause a host until reset', () => {
     expect(String(warns[0]?.[1][0])).toContain('host paused'); expect(warns[0]?.[1]).toContain('morel.us-east.host.bsky.network');
     expect(String(infos[0]?.[1][0])).toContain('host resumed'); expect(infos[0]?.[1]).toContain('morel.us-east.host.bsky.network');
     for (const [, args] of log.lines) for (const a of args) expect(String(a)).not.toMatch(/did:/);
+  });
+  it('the warn carries the seconds until reset (4th argument), rounded, never negative', async () => {
+    const { log } = await runOne(9);
+    const warn = log.lines.find(([l]) => l === 'warn');
+    expect(warn?.[1]).toEqual(['pds-walker: host paused', 'morel.us-east.host.bsky.network', 9, 5]);
+  });
+  it('a second low-Remaining response during the same pause logs no second warn; a later pause logs again (M2)', async () => {
+    const clock = fakeClock(); const log = recordingLogger();
+    const limiter = hostLimiter({ perHost: 4, now: clock.now, sleep: clock.sleep, log });
+    const mk = (resetMs: number) => new Response(LATEST, { status: 200, headers: { 'ratelimit-remaining': '9', 'ratelimit-reset': String(resetMs / 1000) } });
+    limiter.observe('h.example', mk(1_000_000 + 5_000));
+    limiter.observe('h.example', mk(1_000_000 + 5_000)); // same pause, no new warn
+    expect(log.lines.filter(([l]) => l === 'warn')).toHaveLength(1);
+    await limiter.run('h.example', () => Promise.resolve(1)); // sleeps to reset, logs resumed
+    expect(log.lines.filter(([l]) => l === 'info')).toHaveLength(1);
+    limiter.observe('h.example', mk(clock.now() + 3_000)); // a new pause after resume
+    expect(log.lines.filter(([l]) => l === 'warn')).toHaveLength(2);
+  });
+  it('a response with only one of the two headers does not pause (both are needed)', async () => {
+    const clock = fakeClock(); const log = recordingLogger();
+    const limiter = hostLimiter({ perHost: 4, now: clock.now, sleep: clock.sleep, log });
+    limiter.observe('h.example', new Response(LATEST, { status: 200, headers: { 'ratelimit-remaining': '1' } }));
+    limiter.observe('h.example', new Response(LATEST, { status: 200, headers: { 'ratelimit-reset': String((clock.now() + 9_000) / 1000) } }));
+    await limiter.run('h.example', () => Promise.resolve(1));
+    expect(clock.sleeps).toEqual([]);
+    expect(log.lines).toEqual([]);
   });
   it('a paused host does not delay another host', async () => {
     const { clock, seen, second } = await runOne(9);

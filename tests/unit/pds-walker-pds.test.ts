@@ -21,11 +21,12 @@ const PAGE2 = { records: [rec('3juc5mymmz22b', 'did:plc:b2')], cursor: '3juc5mym
 const PAGE3 = { records: [] };
 
 type Route = [status: number, body: string, headers?: Record<string, string>];
-type Seen = { url: string }[];
+type Seen = { url: string; accept?: string }[];
 function fakeFetch(routes: Array<[pattern: RegExp | string, route: Route]>, seen: Seen = []): typeof fetch {
-  return (input) => {
+  return (input, init) => {
     const href = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    seen.push({ url: href });
+    const accept = (init?.headers as Record<string, string> | undefined)?.accept;
+    seen.push(accept === undefined ? { url: href } : { url: href, accept });
     for (const [pattern, [status, body, headers]] of routes) {
       const hit = typeof pattern === 'string' ? href.includes(pattern) : pattern.test(href);
       if (hit) return Promise.resolve(new Response(body, { status, headers: { 'content-type': 'application/json', ...(headers ?? {}) } }));
@@ -47,9 +48,23 @@ describe('latestRev() — com.atproto.sync.getLatestCommit', () => {
     expect(typeof r).toBe('object');
     if (typeof r !== 'string') { expect(r.unknown).toMatch(/502/); expect(r.unknown).toContain('puffball.us-east.host.bsky.network'); }
   });
-  it('a 200 with no rev in the body → unknown', async () => {
-    const r = await latestRev(PDS, DID, { fetchImpl: fakeFetch([['getLatestCommit', [200, j({ cid: 'x' })]]]) });
-    expect(typeof r).toBe('object');
+  it('a 200 with no rev, an empty rev, a null body, or a non-object body → unknown naming the cause (M2)', async () => {
+    for (const body of [j({ cid: 'x' }), j({ rev: '' }), 'null', '"just a string"']) {
+      const r = await latestRev(PDS, DID, { fetchImpl: fakeFetch([['getLatestCommit', [200, body]]]) });
+      expect(typeof r).toBe('object');
+      if (typeof r !== 'string') expect(r.unknown).toBe('getLatestCommit puffball.us-east.host.bsky.network: no rev in body');
+    }
+  });
+  it('sends accept: application/json, and a fetch that throws (network) → unknown with the message (M2)', async () => {
+    const seen: Seen = [];
+    await latestRev(PDS, DID, { fetchImpl: fakeFetch([['getLatestCommit', [200, j(LATEST)]]], seen) });
+    expect(seen[0]?.accept).toBe('application/json');
+    const r = await latestRev(PDS, DID, { fetchImpl: () => Promise.reject(new Error('ECONNRESET')) });
+    if (typeof r !== 'string') expect(r.unknown).toBe('getLatestCommit puffball.us-east.host.bsky.network: ECONNRESET');
+  });
+  it('a pds that is not a URL is named as given in the reason (M2)', async () => {
+    const r = await latestRev('not a url', DID, { fetchImpl: fakeFetch([]) });
+    if (typeof r !== 'string') expect(r.unknown).toBe('getLatestCommit not a url: 404');
   });
 });
 
@@ -66,7 +81,7 @@ describe('listFollows() — com.atproto.repo.listRecords over app.bsky.graph.fol
     expect(seen).toHaveLength(3);
     expect(seen[0]?.url).toContain('collection=app.bsky.graph.follow');
     expect(seen[0]?.url).toContain('limit=100');
-    expect(seen[0]?.url).not.toContain('cursor=');
+    expect(seen[0]?.url).toBe(`${PDS}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(DID)}&collection=app.bsky.graph.follow&limit=100`);
     expect(seen[2]?.url).toContain('cursor=3juc5mymmz22b');
   });
   it('a 502 on page 2 of 3 → unknown with NO subjects from page 1 (never a partial list)', async () => {
@@ -86,6 +101,10 @@ describe('listFollows() — com.atproto.repo.listRecords over app.bsky.graph.fol
     const r = await listFollows(PDS, DID, { fetchImpl: fakeFetch([[/listRecords/, [200, html, { 'content-type': 'text/html' }]]]) });
     expect('unknown' in r).toBe(true);
     if ('unknown' in r) expect(r.unknown).toMatch(/JSON/);
+  });
+  it('a 200 with no records field, or a null body, is an empty last page (M2)', async () => {
+    expect(await listFollows(PDS, DID, { fetchImpl: fakeFetch([[/listRecords/, [200, j({})]]]) })).toEqual([]);
+    expect(await listFollows(PDS, DID, { fetchImpl: fakeFetch([[/listRecords/, [200, 'null']]]) })).toEqual([]);
   });
   it('a record without a subject is skipped, not turned into "undefined"', async () => {
     const r = await listFollows(PDS, DID, { fetchImpl: fakeFetch([[/listRecords/, [200, j({ records: [{ uri: 'x', cid: 'y', value: { $type: 'app.bsky.graph.follow' } }, rec('k', 'did:plc:ok')] })]]]) });

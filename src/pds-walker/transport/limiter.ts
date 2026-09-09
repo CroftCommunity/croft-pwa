@@ -57,10 +57,8 @@ export function hostLimiter(opts: LimiterOptions = {}): Limiter {
     async run<T>(host: string, fn: () => Promise<T>): Promise<T> {
       const s = stateOf(host);
       while (s.inFlight >= perHost) await new Promise<void>((resolve) => s.waiters.push(resolve));
-      while (s.pausedUntil > now()) {
-        await sleep(s.pausedUntil - now());
-        if (s.pausedUntil <= now() && s.pausedLogged) { s.pausedLogged = false; log.info('pds-walker: host resumed', host); }
-      }
+      while (s.pausedUntil > now()) await sleep(s.pausedUntil - now());
+      if (s.pausedLogged) { s.pausedLogged = false; log.info('pds-walker: host resumed', host); }
       s.inFlight++;
       try {
         return await fn();
@@ -70,8 +68,13 @@ export function hostLimiter(opts: LimiterOptions = {}): Limiter {
       }
     },
     observe(host: string, res: Response): void {
-      const remaining = Number(res.headers.get('ratelimit-remaining'));
-      const resetSeconds = Number(res.headers.get('ratelimit-reset'));
+      // Both headers, or nothing: `Number(null)` is 0, which would read a missing Remaining as
+      // "budget spent" and a missing Reset as the epoch — the M2 test that caught it.
+      const remainingRaw = res.headers.get('ratelimit-remaining');
+      const resetRaw = res.headers.get('ratelimit-reset');
+      if (remainingRaw === null || resetRaw === null) return;
+      const remaining = Number(remainingRaw);
+      const resetSeconds = Number(resetRaw);
       if (!Number.isFinite(remaining) || !Number.isFinite(resetSeconds)) return;
       if (remaining >= threshold) return;
       const s = stateOf(host);
