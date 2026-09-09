@@ -18,14 +18,11 @@ export { indexedDbStore } from './store/indexeddb';
 import { resolveDid as _resolveDid } from './transport/resolve';
 import { latestRev as _latestRev, listFollows as _listFollows } from './transport/pds';
 import { hostLimiter, defaultLogger } from './transport/limiter';
-import type { Did, Rev, Logger } from './core/rings';
+import type { Logger } from './core/rings';
 
-/** What the walker needs from the network — three calls, each honest on failure. */
-export type Transport = {
-  resolve(did: string): Promise<{ readonly pds: string } | { readonly unknown: string }>;
-  latestRev(pds: string, did: string): Promise<Rev | { readonly unknown: string }>;
-  listFollows(pds: string, did: string): Promise<readonly Did[] | { readonly unknown: string }>;
-};
+import type { Transport } from './walker';
+export { createWalker } from './walker';
+export type { Transport, Walker, WalkerDeps, HostState, Progress, WalkerEvent } from './walker';
 
 /** Options for the fetch-backed transport. `log` defaults to the library's console posture; a page passes its own. */
 export type FetchTransportOptions = {
