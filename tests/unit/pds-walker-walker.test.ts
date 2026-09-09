@@ -7,16 +7,25 @@ import { createWalker, memoryStore, RING_IDS, type Did, type Logger, type Ring, 
 
 type Node = { pds: string; rev: string; follows: Did[] };
 type Graph = Record<string, Node>;
-type Fake = Transport & { calls: string[]; failHosts: Set<string>; graph: Graph };
+type Fake = Transport & { calls: string[]; failHosts: Set<string>; failList: Set<string>; graph: Graph; maxInFlight: number; hold: boolean; release: () => void };
 function fakeTransport(graph: Graph): Fake {
-  const calls: string[] = []; const failHosts = new Set<string>();
-  const hostOf = (pds: string) => new URL(pds).host;
-  return {
-    graph, calls, failHosts,
+  const calls: string[] = []; const failHosts = new Set<string>(); const failList = new Set<string>();
+  const hostOf = (pds: string) => { try { return new URL(pds).host; } catch { return pds; } };
+  let inFlight = 0; const waiters: Array<() => void> = [];
+  const fake: Fake = {
+    graph, calls, failHosts, failList, maxInFlight: 0, hold: false, release: () => { while (waiters.length > 0) waiters.shift()?.(); },
     resolve: (did) => { calls.push(`resolve ${did}`); const n = graph[did]; return Promise.resolve(n ? { pds: n.pds } : { unknown: 'DID resolution failed: 404' }); },
     latestRev: (pds, did) => { calls.push(`rev ${did}`); if (failHosts.has(hostOf(pds))) return Promise.resolve({ unknown: `getLatestCommit ${hostOf(pds)}: 502` }); return Promise.resolve(graph[did]?.rev ?? { unknown: 'no such repo' }); },
-    listFollows: (pds, did) => { calls.push(`list ${did}`); if (failHosts.has(hostOf(pds))) return Promise.resolve({ unknown: `listRecords ${hostOf(pds)}: 502 at page 1` }); return Promise.resolve(graph[did]?.follows ?? { unknown: 'no such repo' }); },
+    listFollows: async (pds, did) => {
+      calls.push(`list ${did}`);
+      if (failHosts.has(hostOf(pds)) || failList.has(hostOf(pds))) return { unknown: `listRecords ${hostOf(pds)}: 502 at page 1` };
+      inFlight++; fake.maxInFlight = Math.max(fake.maxInFlight, inFlight);
+      if (fake.hold && did !== ME) await new Promise<void>((resolve) => waiters.push(resolve));
+      inFlight--;
+      return graph[did]?.follows ?? { unknown: 'no such repo' };
+    },
   };
+  return fake;
 }
 function recordingLogger(): Logger & { lines: Array<[string, unknown[]]> } {
   const lines: Array<[string, unknown[]]> = [];
@@ -39,7 +48,7 @@ const chainHolds = (rings: (id: RingId) => Ring) => {
 describe('createWalker() — walk', () => {
   it('walks a three-node graph: me/fol at once, mut/hop/hop2 as the followees are listed; containment after every event', async () => {
     const t = fakeTransport(graph()); const log = recordingLogger(); let now = 1000;
-    const w = createWalker({ transport: t, store: memoryStore(), log, now: () => now });
+    const w = createWalker({ transport: t, store: memoryStore(), log, now: () => now, policy: { ring2Parallel: 1 } }); // sequential, so the sequence is exact
     const events: string[] = [];
     w.on('ring', (e) => { const r = e as Ring; events.push(`${r.id}:${r.members.size}:${r.complete ? 'c' : 'i'}`); chainHolds((id) => w.ring(id)); });
     await w.walk(ME);
@@ -58,6 +67,74 @@ describe('createWalker() — walk', () => {
     const hopIdx = events.findIndex((e) => e.startsWith('hop:5')); const hop2Idx = events.findIndex((e) => e.startsWith('hop2:6'));
     expect(hopIdx).toBeGreaterThanOrEqual(0); expect(hop2Idx).toBeGreaterThan(hopIdx);
     expect(w.hosts().filter((h) => h.state === 'unknown')).toEqual([]);
+    // (M3) the exact sequence: me/fol complete at once; mut/hop/hop2 grow per listing and
+    // flip complete together at the end; nothing is emitted twice for an unchanged ring.
+    expect(events).toEqual([
+      'me:1:i', 'mut:1:i', 'fol:1:i', 'hop:1:i', 'hop2:1:i',            // load(): an empty store, every ring {me}, incomplete
+      'me:1:c', 'mut:1:i', 'fol:4:c', 'hop:4:i', 'hop2:4:i',            // me listed: me/fol complete; mut's asOf moved (same members)
+      'mut:2:i', 'hop:5:i', 'hop2:5:i',                                 // M listed: a mutual, and Y
+      'hop2:6:i',                                                       // F listed: X joins hop2 only
+      'mut:2:c', 'hop:5:c', 'hop2:6:c',                                 // N listed: every source known
+    ]);
+    expect(log.lines.filter(([l, a]) => l === 'info' && a[0] === 'pds-walker: ring')).toHaveLength(5); // one per complete flip: me, fol, mut, hop, hop2
+    expect(log.lines.filter(([l, a]) => l === 'debug' && a[0] === 'pds-walker: rev moved')).toHaveLength(0); // a first walk moves nothing
+  });
+  it('(M3) before any walk every ring is empty and incomplete; refresh before a walk does nothing', async () => {
+    const t = fakeTransport(graph()); const log = recordingLogger();
+    const w = createWalker({ transport: t, store: memoryStore(), log });
+    for (const id of RING_IDS) { expect(w.ring(id).members.size).toBe(0); expect(w.ring(id).complete).toBe(false); expect(w.ring(id).asOf).toBe(0); expect(w.ring(id).id).toBe(id); }
+    await w.refresh();
+    expect(t.calls).toEqual([]); expect(log.lines).toEqual([]);
+  });
+  it('(M3) on() returns an unsubscribe; the exact warn and stopped lines; a clean walk emits no host event', async () => {
+    const t = fakeTransport(graph()); const log = recordingLogger();
+    const w = createWalker({ transport: t, store: memoryStore(), log });
+    let n = 0; const off = w.on('progress', () => { n++; }); const hostEvents: unknown[] = []; w.on('host', (e) => hostEvents.push(e));
+    await w.walk(ME); await w.idle();
+    expect(n).toBe(3); off();
+    await w.refresh(); await w.idle();
+    expect(n).toBe(3);
+    expect(hostEvents).toEqual([]);
+    w.stop();
+    expect(log.lines.at(-1)).toEqual(['info', ['pds-walker: stopped']]);
+    t.failHosts.add('c.example');
+    const w2 = createWalker({ transport: t, store: memoryStore(), log: recordingLogger() });
+    const log2 = recordingLogger(); const w3 = createWalker({ transport: t, store: memoryStore(), log: log2 }); void w2;
+    await w3.walk(ME); await w3.idle();
+    expect(log2.lines.filter(([l]) => l === 'warn')).toEqual([['warn', ['pds-walker: host unknown', 'c.example', 'getLatestCommit c.example: 502']]]);
+  });
+  it('(M3) a listing that fails after its rev was read marks the host and leaves the ring incomplete', async () => {
+    const t = fakeTransport(graph()); t.failList.add('b.example'); const log = recordingLogger();
+    const w = createWalker({ transport: t, store: memoryStore(), log });
+    await w.walk(ME); await w.idle();
+    expect(w.hosts().find((h) => h.host === 'b.example')?.state).toBe('unknown');
+    expect(w.hosts().find((h) => h.host === 'b.example')?.reason).toBe('listRecords b.example: 502 at page 1');
+    expect(w.ring('hop2').complete).toBe(false);
+    expect(w.ring('hop2').members.has('did:plc:x')).toBe(false);
+    expect(log.lines.filter(([l]) => l === 'warn')).toHaveLength(1);
+  });
+  it('(M3) ring2Parallel bounds the listings actually in flight: 2 → at most 2, 1 → at most 1', async () => {
+    for (const [n, expected] of [[2, 2], [1, 1]] as const) {
+      const t = fakeTransport(graph()); t.hold = true;
+      const w = createWalker({ transport: t, store: memoryStore(), log: recordingLogger(), policy: { ring2Parallel: n } });
+      await w.walk(ME);
+      for (let i = 0; i < 20; i++) await Promise.resolve(); // the followee listings reach their hold
+      t.hold = false;
+      for (let i = 0; i < 40; i++) { t.release(); await Promise.resolve(); }
+      await w.idle();
+      expect(t.maxInFlight, `ring2Parallel ${n}`).toBe(expected);
+      expect(w.ring('hop2').complete).toBe(true);
+    }
+  });
+  it('(M3) an unresolvable did:web names its own host as the unknown directory; a non-URL pds is named as given', async () => {
+    const t = fakeTransport({}); const w = createWalker({ transport: t, store: memoryStore(), log: recordingLogger() });
+    await w.walk('did:web:example.org'); await w.idle();
+    expect(w.hosts()).toEqual([expect.objectContaining({ host: 'example.org', state: 'unknown', reason: 'DID resolution failed: 404' })]);
+    const g: Graph = { [ME]: { pds: 'nonsense', rev: 'r', follows: [] } };
+    const t2 = fakeTransport(g); t2.failHosts.add('nonsense');
+    const w2 = createWalker({ transport: t2, store: memoryStore(), log: recordingLogger() });
+    await w2.walk(ME); await w2.idle();
+    expect(w2.hosts().map((h) => `${h.host}:${h.state}`)).toEqual(['plc.directory:ok', 'nonsense:unknown']);
   });
   it('(vi) progress counts up to exactly the followee count', async () => {
     const t = fakeTransport(graph()); const w = createWalker({ transport: t, store: memoryStore(), log: recordingLogger() });
@@ -108,6 +185,9 @@ describe('createWalker() — walk', () => {
     await w.walk('did:plc:ghost'); await w.idle();
     for (const id of RING_IDS) { expect([...w.ring(id).members]).toEqual(['did:plc:ghost']); expect(w.ring(id).complete).toBe(false); }
     expect(w.hosts()[0]?.state).toBe('unknown');
+    expect(t.calls).toEqual(['resolve did:plc:ghost']);
+    await w.refresh();
+    expect(t.calls).toEqual(['resolve did:plc:ghost', 'resolve did:plc:ghost']);
   });
 });
 
@@ -135,6 +215,7 @@ describe('createWalker() — refresh', () => {
     const t = fakeTransport(graph()); const w = createWalker({ transport: t, store: memoryStore(), log: recordingLogger(), now: () => now, policy: { refreshMs: { me: 1, mut: 1, fol: 1, hop: 1, hop2: 1 } } });
     await w.walk(ME); await w.idle();
     const before = w.ring('hop2').members;
+    const hostEvents: HostState[] = []; w.on('host', (e) => hostEvents.push(e as HostState));
     t.failHosts.add('b.example'); now += 10;
     await w.refresh();
     expect(w.ring('hop2').members).toEqual(before);
@@ -142,6 +223,21 @@ describe('createWalker() — refresh', () => {
     t.failHosts.delete('b.example'); now += 10;
     await w.refresh();
     expect(w.hosts().find((h) => h.host === 'b.example')?.state).toBe('ok');
+    expect(hostEvents.map((h) => `${h.host}:${h.state}`)).toEqual(['b.example:unknown', 'b.example:ok']);
+  });
+  it('(M3) refresh counts: a followee whose host fails is unknown; a followee never listed is not due and does not crash', async () => {
+    let now = 10_000_000; const log = recordingLogger();
+    const t = fakeTransport(graph()); t.failHosts.add('b.example');
+    const w = createWalker({ transport: t, store: memoryStore(), log, now: () => now, policy: { refreshMs: { me: 1, mut: 1, fol: 1, hop: 1, hop2: 1 } } });
+    await w.walk(ME); await w.idle(); // F never listed (its host failed)
+    now += 10;
+    await w.refresh();
+    const info = log.lines.filter(([l, a]) => l === 'info' && a[0] === 'pds-walker: refresh').at(-1);
+    expect(info?.[1][1]).toEqual({ due: 3, moved: 0, kept: 3, unknown: 0 }); // me, M, N are due; F has no snapshot to be due from
+    t.failHosts.delete('b.example'); t.failHosts.add('c.example'); now += 10;
+    await w.refresh();
+    const info2 = log.lines.filter(([l, a]) => l === 'info' && a[0] === 'pds-walker: refresh').at(-1);
+    expect(info2?.[1][1]).toEqual({ due: 3, moved: 0, kept: 2, unknown: 1 });
   });
   it('when me moved and gained a followee, the new followee is listed too (its subtree is walked)', async () => {
     let now = 10_000_000;

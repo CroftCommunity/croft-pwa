@@ -2,7 +2,7 @@
 // honest `{ unknown: reason }`. A WRAPPER over `src/atproto/read.ts`'s `resolvePds`, which
 // already does did:plc (plc.directory), did:web (.well-known, path form too), the
 // `#atproto_pds` pick and the slash trim — SHARED-CODE.md rule 4 applies inside a repo too.
-import { resolvePds } from '../../atproto/read';
+import { resolvePds } from '../../atproto/read.js';
 
 /** Injectable fetch, so every test runs with no network. Declared here so the emitted `.d.ts` imports nothing from read.ts. */
 export type ResolveDeps = { readonly fetchImpl?: typeof fetch };

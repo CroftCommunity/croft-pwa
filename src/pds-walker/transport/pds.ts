@@ -2,8 +2,8 @@
 // CORS-open on every PDS measured (research § 3.1). Honest on failure: a call that cannot
 // complete answers `{ unknown: reason }`, and a paged listing that fails on page N answers
 // unknown with NOTHING from the pages before it — a partial list would shrink a ring.
-import type { Did, Rev } from '../core/rings';
-import type { Limiter } from './limiter';
+import type { Did, Rev } from '../core/rings.js';
+import type { Limiter } from './limiter.js';
 
 /** Injectable fetch, and the per-host limiter every call runs under (3c). */
 export type PdsDeps = { readonly fetchImpl?: typeof fetch; readonly limiter?: Limiter };

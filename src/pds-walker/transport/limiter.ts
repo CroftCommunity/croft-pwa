@@ -3,7 +3,7 @@
 // hosts, so the cap is per host: never more than `perHost` in flight, and when a response
 // says the budget is nearly spent (`RateLimit-Remaining` below 10) the host is paused until
 // the `RateLimit-Reset` moment. Clock and sleep are injected so every test is deterministic.
-import type { Logger } from '../core/rings';
+import type { Logger } from '../core/rings.js';
 
 /** What `pds.ts` needs: run a call under the cap, and let the limiter read the response's headers. */
 export type Limiter = {

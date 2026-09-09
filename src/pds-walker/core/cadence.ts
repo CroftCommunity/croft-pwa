@@ -1,6 +1,6 @@
 // Cadence (plan 2026-09-08 § Phase 2c, research § 4): how often each ring is refreshed and
 // which repos are due now. Pure — the clock is a parameter.
-import type { Did, RepoSnapshot, RingId } from './rings';
+import type { Did, RepoSnapshot, RingId } from './rings.js';
 
 /** Refresh intervals per ring, the per-host in-flight cap, and ring-2 fan-out. */
 export type Policy = {

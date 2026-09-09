@@ -1,6 +1,6 @@
 // The rev gate (plan 2026-09-08 § Phase 2b): the one decision the walker makes per repo on
 // refresh. Pure — the walker asks the transport for the rev and hands both here.
-import type { RepoSnapshot, Rev } from './rings';
+import type { RepoSnapshot, Rev } from './rings.js';
 
 /** What the transport answered for `getLatestCommit`: a rev, nothing, or an honest unknown. */
 export type LatestRev = Rev | undefined | { readonly unknown: string };

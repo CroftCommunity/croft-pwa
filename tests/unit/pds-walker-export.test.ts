@@ -15,6 +15,16 @@ describe('croft-pwa/pds-walker — the export path', () => {
     expect(m.VERSION).toBe('0.1.0');
   });
 
+  it('loads in plain Node, unbundled — every emitted relative import resolves (M3 found extensionless imports)', () => {
+    // vitest and esbuild resolve `./core/rings` without an extension; Node ESM and a browser
+    // serving the files as-is do not. The emitted tree must carry `.js` on every relative
+    // import, or a consumer without a bundler gets ERR_MODULE_NOT_FOUND.
+    const out = execFileSync(process.execPath, ['--input-type=module', '-e',
+      "const m = await import('croft-pwa/pds-walker'); if (typeof m.createWalker !== 'function' || typeof m.rings !== 'function') process.exit(2); console.log('ok');"],
+      { cwd: root, encoding: 'utf8' });
+    expect(out.trim()).toBe('ok');
+  });
+
   it('packs only the built library plus package.json, README and LICENSE', () => {
     const out = execFileSync('npm', ['pack', '--dry-run', '--json'], { cwd: root, encoding: 'utf8' });
     const parsed = JSON.parse(out) as Array<{ files: Array<{ path: string }> }>;
