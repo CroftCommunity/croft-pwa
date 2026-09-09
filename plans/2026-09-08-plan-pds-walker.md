@@ -2,7 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** EXECUTING — G1–G5 landed (`4e8e528`, `3b51aba`, `dbed1b7`, `81a78cd`, `79582e9`); G6 (6a, 6a-ii, 6a-iii, 6b, 6b-ii, 6b-iii) shipped 2026-09-08 on `claude/pds-walker-g6`, landing; 6c (the first release) next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
+**Status:** CLOSED 2026-09-08 — shipped in full through 6c (18 phases + M1–M3, seven landing groups G1–G7, tag `pds-walker-v0.1.0` on `6005f12`); Phase 7 deferred to forage's plan, Phase 8 not started by design. Close-out in the Review Log.
 
 Format note: this plan follows the `phase-plan` skill's template (Problem · Reasoning ·
 Verified Assumptions · Documentation Impact · Concurrency Map · Phases with call chain,
@@ -15,6 +15,9 @@ ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer
 
 | phase | outcome | commit | note |
 |---|---|---|---|
+| 6c | ✅ | `6005f12` + tag | `pds-walker-v0.1.0`: run 34297765711 green, asset + sha256, consumer install from GitHub proven |
+| 7 | ⏭️ | — | forage adoption, under forage's plan (a tree, not a file; first pin = the tagged sha) |
+| 8 | ⏭️ | — | Jetstream tier, when a poll cost exists to compare against |
 | 6a | ✅ | `86723b3` | the shell, hermetic; page_rings registered (5th file) |
 | 6a-ii | ✅ | `7c756e0` | cspFor(page); rings.html alone connect-src https: |
 | 6a-iii | ✅ | `108d818` | the page walks through the export path; 8.6 KB gz; real-network run clean |
@@ -1052,7 +1055,9 @@ build && npx playwright test tests/e2e/standards.spec.ts` — expected `expect(r
 other way, so one RED suffices).
 **Logging:** none.
 
-### Phase 6c: the first release — `pds-walker-v0.1.0`
+### Phase 6c: the first release — `pds-walker-v0.1.0` — ✅ SHIPPED (`6005f12`, tag `pds-walker-v0.1.0`)
+
+**Delivered (2026-09-08):** the `## [pds-walker 0.1.0] — 2026-09-08` section and TODO § 3 boxes 2–3 landed as PR #27 (`6005f12`); the tag was cut on that merge commit; run 34297765711 passed every step (verify tag matches VERSION → npm ci → Playwright → `npm test` → pack + checksum → create release) and attached `pds-walker-v0.1.0.tgz` (28,173 B) with its sha256 (`91008928…617d34`, verified against the downloaded asset). Consumer-side proof from GitHub at the tagged sha: `npm install github:CroftCommunity/croft-pwa#6005f12…` → 15 s, `prepare` ran, `import('croft-pwa/pds-walker')` → `0.1.0` with `createWalker`, `createFetchTransport`, `indexedDbStore` present; the lockfile resolves to the sha. TODO § 3 box 4 (the skylite-copy register flip) stays open by design — it is bluebird's consumption, not this plan's. Finders after the tag: changelog quiet (tag ↔ section both ways), shared-code prints no 47e.
 
 **Goal:** the first tag, gated by 1d's workflow.
 **Changes:**
@@ -1081,14 +1086,18 @@ verification (read its log end to end, `gh run view <id> --log`, not the tick).
 
 ---
 
-### Phase 7: first consumer — forage (shaped here, executed under a forage plan)
+### Phase 7: first consumer — forage (shaped here, executed under a forage plan) — ⏭️ DEFERRED to forage's plan
+
+**Decision 2026-09-08:** out of this plan's execution by its own text ("executed under a forage plan"). Two facts for that plan, learned here: the library is a **tree** (`lib/pds-walker/**` + `lib/atproto/read.js`) with `.js` imports, so "copy the built file" becomes "copy `lib/` whole" or "ship a single-file bundle" (D2 stands either way); and the first pin is `github:CroftCommunity/croft-pwa#6005f12c7c22f7807d54f587ef8960da1825638c` (tag `pds-walker-v0.1.0`). Tracked in croft-pwa `TODO.md` § 3.
 
 - `package.json`: `"croft-pwa": "github:CroftCommunity/croft-pwa#<sha of pds-walker-v0.1.0>"`.
 - `npm run vendor:sync` copies `node_modules/croft-pwa/lib/pds-walker/index.js` → `js/vendor/pds-walker.js`; `test/vendor.test.js` gains byte-equality against the installed file.
 - One call site: `ringGraph()` takes follows from the walker; mutuals from the walker once ring 2 has filled, AppView until then. *Pass 2 (V24):* forage's `hop` is the mutuals' follows (`rings.js` § `chain()`), so if OQ6 keeps the research definition in the core, forage's call site must compute its own `hop` from the walker's snapshots (it can — `hopFollows` per mutual is a subset of what the walker stores), and its `test/rings.test.js` containment counterexample must keep passing. *Pass 3 — OQ6 (c):* forage's `hop` **is** the walker's `hop` now, one-to-one; `ringGraph()` reads `walker.ring('hop')` and computes nothing; `hop2` is available to forage as a new optional scope if it wants one (its own decision, its own plan).
 - VERSIONING.md § Cross-repo pins gains forage's row; check 47c is the reminder.
 
-### Phase 8: optional, later — Jetstream for ring 1
+### Phase 8: optional, later — Jetstream for ring 1 — ⏭️ NOT STARTED (by design)
+
+**Decision 2026-09-08:** its own precondition (a measured poll cost to compare against) does not exist until a consumer runs the walker on a schedule. Tracked in croft-pwa `TODO.md` § 3.
 
 When signed in and following ≤ 10,000 accounts, a Jetstream socket replaces the ring-1
 poll. Not before the walker has a measured poll cost to compare against.
@@ -1515,3 +1524,41 @@ than assumed: the dry-tag run uses the push trigger, which runs the file at the 
   was repaired by recreating both commits before push. Broad validation against the real
   network is clean, including two off-bsky hosts through the widened `connect-src`.
   Evidence: `RUN-PDS-WALKER-06-SUMMARY.md`.
+
+### Plan close-out — 2026-09-08
+
+**Shipped:** croft-pwa is a package (`exports` → `croft-pwa/pds-walker`, `files: ["lib"]`,
+`prepare`; `build:lib` first in the gate; the emitted ESM loads in plain Node) released by
+`pds-walker-vX.Y.Z` tags through a workflow that refuses a tag disagreeing with `VERSION`,
+runs the full gate, and attaches the tarball + sha256 — first tag `pds-walker-v0.1.0` on
+`6005f12`. The library: the pure core (`rings` with five nested rings incl. `hop`/`hop2`,
+`decide`, the cadence), the fetch transport (resolve, `getLatestCommit`, paged
+`listRecords`, a per-host limiter honouring `RateLimit-*`), the store seam with memory and
+IndexedDB implementations, and `createWalker` (ring 1 awaited, outer rings in the
+background, rev-gated refresh, unknown-is-not-empty, events, `load`/`idle`). Every module
+mutation-tested: core 100%, transport 98.3%, walker 99.0%. The reference page `rings.html`
+imports the walker through the export path, carries the one per-page CSP exception, and is
+gated (behaviour, axe ×2, widths, targets, tab, sweeps, index card, guide chapter); against
+the real network it walked bsky.app to 2,630 accounts across 14 hosts incl. two off
+bsky.network, in 2.5 s, with no CSP violation. CroftC's SHARED-CODE register, ARCHITECTURE
+card and CHANGELOGS rule 2 record the new shape. Seven RUN summaries carry the evidence.
+
+**Stopped or skipped:** Phase 7 (forage adoption) deferred to forage's own plan, as the
+plan itself said; Phase 8 (Jetstream) not started, its precondition absent. TODO § 3 box 4
+(the skylite-copy register flip) stays open — bluebird's consumption, not this plan's.
+6a-iii's validation step (b) (a handle whose PDS is down) was not walked live; the routed
+502 case stands in for it.
+
+**Discoveries:** (1) The emitted ESM had extensionless relative imports that every tool in
+the gate resolved and plain Node did not — found only by the manual Node run; the gate now
+spawns Node to import the package. (2) Mutation testing found two real transport defects
+the phase tests had passed (`hostOf` handed the URL; `Number(null) === 0` pausing a host on
+a lone Reset header) and one walker defect (a rev failure before any snapshot left the host
+unmarked). (3) vitest reports a missing named export as `X is not a function`, not the
+SyntaxError the plan predicted — same information, different text. (4) axe does not fail a
+same-colour text break as serious/critical; proving the a11y sweep took an `image-alt`
+break. (5) `measure.record` requires a registry entry per page. (6) Three command chains
+committed red states before stopping; every later chain ran under a fail-fast script, and
+every red commit was amended before push. (7) The reference PDS returns a cursor on the
+last page of records and an empty page after it — a shape the plan did not know and the
+transport now handles.
