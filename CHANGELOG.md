@@ -9,6 +9,28 @@ Started 2026-08-29; earlier history is in `git log`.
 
 Contexts: site · pds-walker
 
+## [pds-walker 0.1.0] — 2026-09-08
+
+The first release of the `croft-pwa/pds-walker` package (tag `pds-walker-v0.1.0`; consumers
+pin the tagged commit's sha per `CroftC/.claude/SHARED-CODE.md` rule 1). What it is:
+
+- **pds-walker:** `createWalker({ transport, store, policy?, now?, log? })` walks an account's
+  social rings direct from the data servers — no relay, no AppView: ring 1 awaited, mutuals
+  and the outer rings (`hop` = everyone your mutuals follow, `hop2` = everyone your follows
+  follow) filling in the background; a rev-gated `refresh()` that re-lists only what moved;
+  hosts reported as unknown rather than rings shrunk; `load()` for a warm start; events
+  (`ring`, `host`, `progress`) for a page to draw from.
+- **pds-walker:** `createFetchTransport()` — DID resolution, `getLatestCommit`,
+  paged `listRecords` over `app.bsky.graph.follow`, all unauthenticated, honest on failure,
+  under a per-host limiter that honours `RateLimit-*` headers.
+- **pds-walker:** `memoryStore()` and `indexedDbStore(name)` behind one `Store` seam.
+- **pds-walker:** the pure core — `rings()`, `decide()`, `defaultPolicy`/`due()`/`ring2Targets()`.
+- **pds-walker:** the emitted ESM carries `.js` on every import, so plain Node and unbundled
+  browsers load the tree; the package is proven in plain Node by the gate.
+- **pds-walker:** mutation-tested (stryker) to 99–100% per module; the reference page is
+  `rings.html` on this site.
+
+
 ## 2026-09
 
 - 2026-09-08 **site:** **Rings** — a new standards page (`rings.html`): enter a handle and
