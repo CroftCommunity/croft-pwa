@@ -38,7 +38,7 @@ describe('resolveDid() — a DID to its PDS, or unknown', () => {
   it('a 404 from the directory → unknown, and the reason names the status', async () => {
     const r = await resolveDid('did:plc:missing', { fetchImpl: fakeFetch({}) });
     expect('unknown' in r).toBe(true);
-    if ('unknown' in r) expect(r.unknown).toContain('404');
+    if ('unknown' in r) expect(r.unknown).toBe('DID resolution failed: 404'); // exact: a `String(e)` fallback would read "AtprotoReadError: …"
   });
   it('a document with no PDS service → unknown, and the reason names the cause (not the status)', async () => {
     const r = await resolveDid('did:plc:nopds', { fetchImpl: fakeFetch({ 'did:plc:nopds': [200, JSON.stringify({ ...PLC_DOC, service: [] })] }) });
