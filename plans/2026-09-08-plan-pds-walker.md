@@ -2,7 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** EXECUTING — G1 (`4e8e528`), G2 (`3b51aba`), G3 (`dbed1b7`), G4 (`81a78cd`) landed; G5 (5, M3) shipped 2026-09-08 on `claude/pds-walker-g5`, landing; 6a next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
+**Status:** EXECUTING — G1–G5 landed (`4e8e528`, `3b51aba`, `dbed1b7`, `81a78cd`, `79582e9`); G6 (6a, 6a-ii, 6a-iii, 6b, 6b-ii, 6b-iii) shipped 2026-09-08 on `claude/pds-walker-g6`, landing; 6c (the first release) next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
 
 Format note: this plan follows the `phase-plan` skill's template (Problem · Reasoning ·
 Verified Assumptions · Documentation Impact · Concurrency Map · Phases with call chain,
@@ -15,6 +15,12 @@ ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer
 
 | phase | outcome | commit | note |
 |---|---|---|---|
+| 6a | ✅ | `86723b3` | the shell, hermetic; page_rings registered (5th file) |
+| 6a-ii | ✅ | `7c756e0` | cspFor(page); rings.html alone connect-src https: |
+| 6a-iii | ✅ | `108d818` | the page walks through the export path; 8.6 KB gz; real-network run clean |
+| 6b | ✅ | `183caf7` | axe ×2, 390 px, 44 px, current tab; guide chapter |
+| 6b-ii | ✅ | `89a9c12` | a11y + mobile-fit sweeps reach the page (two breaks proved it) |
+| 6b-iii | ✅ | `16600a9` | the standards index card |
 | 5 | ✅ | `164752d` | createWalker: walk, refresh, hosts, events, stop; load + idle added |
 | M3 | ✅ | `aa43ccd` | 68.6% → 99.0% on walker.ts; ESM extension defect found and fixed |
 | 4a | ✅ | `9ab89e7` | Store seam + memoryStore |
@@ -846,7 +852,9 @@ landing.
 
 ---
 
-### Phase 6a: the rings page — the shell exists, hermetically
+### Phase 6a: the rings page — the shell exists, hermetically — ✅ SHIPPED (`86723b3`)
+
+**Delivered (2026-09-08):** RED `Expected: 200 … Received: 404` as predicted. A fifth file the plan's four did not foresee: `src/measure/registry.ts` — `measure.record` throws for an unregistered metric ("Cannot read properties of undefined (reading 'expires')"), so `page_rings` is registered with its expiry and disclosure. Styles use the repo's real tokens (`--ink`, `--ink-muted`). 13 pages built, budget ok.
 
 *Pass 3 restructure of the 6a group (additive; 6b–6c keep their numbers):* Pass 2's 6a was
 three files with **no test until 6b** — a page with no RED. Counted honestly with its test it
@@ -882,7 +890,9 @@ baseline 6a-iii is measured against); GREEN.
 this phase's. **Done when:** (1) the page serves and renders its shell with no network;
 (2) the spec; `npm test`. **Validation:** Narrow — no network, no CSP change, no workflow.
 
-### Phase 6a-ii: the page's `connect-src` — the one per-page CSP (OQ7 (a), inserted in Pass 3)
+### Phase 6a-ii: the page's `connect-src` — the one per-page CSP (OQ7 (a), inserted in Pass 3) — ✅ SHIPPED (`7c756e0`)
+
+**Delivered (2026-09-08):** as specified; RED on the 13th csp.spec row (`Expected substring: "https:"`), the other twelve rows the guard. `grep -o 'connect-src[^;]*' dist/*.html` shows exactly one line ending in `https:`.
 
 **Goal:** `rings.html` may `fetch` any `https:` origin (any PDS); every other page's policy is
 byte-identical to today's.
@@ -925,7 +935,9 @@ at load, and read `dist/index.html`'s `<meta>` by eye to confirm it is unchanged
 previous build (diff the two builds' `<meta>` lines: `grep -o 'connect-src[^;]*' dist/*.html`
 — one line differs).
 
-### Phase 6a-iii: the page walks — wired through the export path (inserted in Pass 3)
+### Phase 6a-iii: the page walks — wired through the export path (inserted in Pass 3) — ✅ SHIPPED (`108d818`)
+
+**Delivered (2026-09-08):** as specified (counts exclude the account itself). Bundle: rings 8.6 KB gz against the 20 KB budget. **Broad validation (a), the built page against the real network, bsky.app:** mut 12 · fol 14 · hop 2,626 · hop2 2,630, all complete; 14 hosts reached including two off bsky.network (`losers.club`, `pds.pckt.cafe`); 0 CSP violations, 0 failed requests, 0 console lines carrying a DID. (b) a handle whose PDS is down was not walked live (no such stable handle to hand); the routed 502 case in the spec is the evidence for that shape. (c) the PR-preview run is recorded at the G6 landing in `RUN-PDS-WALKER-06-SUMMARY.md`.
 
 **Goal:** `rings.html` walks any handle live from PDSs, drawing as it fills, honest about
 stale and unknown.
@@ -968,7 +980,9 @@ mechanism and the CSP/budget/hermetic risks below were written when 6a was one p
 **Done when:** (1) the built page loads and, given a handle, shows rings filling; (2) `npm run build` + a manual browser run against a real handle (Validation: Moderate); `npm test`.
 **Validation:** Moderate. *(Superseded by 6a / 6a-ii / 6a-iii above.)*
 
-### Phase 6b: the rings page — gated
+### Phase 6b: the rings page — gated — ✅ SHIPPED (`183caf7`)
+
+**Delivered (2026-09-08):** as specified; the current-tab case was the RED, the axe/width/target cases were green before any edit (their RED is 6b-ii's deliberate break). The guide chapter is `guide-rings`.
 
 **Goal:** the page is proven hermetically, accessibly, and on a phone-sized viewport.
 **Changes:**
@@ -991,7 +1005,9 @@ its shape pinned by `tests/unit/guide-content.test.ts` (Pass 2) — add the entr
 run unit`, read that the guide test's count went up by one.
 **Logging:** none new.
 
-### Phase 6b-ii: the page joins the site's page-list gates
+### Phase 6b-ii: the page joins the site's page-list gates — ✅ SHIPPED (`89a9c12`)
+
+**Delivered (2026-09-08):** two breaks were needed, not one: the contrast break tripped the three overflow rows but NOT the axe rows (axe did not grade `color: var(--surface)` as serious/critical), so a second break — an `<img>` with no alt — produced `image-alt (critical)` in both themes. Both restored before any commit. A first version of this commit's message claimed the contrast break had failed axe; corrected before push.
 
 **Goal:** the three sweeps that grade every page grade this one — without a list edit they
 silently do not (V19). *Pass 3:* two of the three here; the CSP sweep starts in 6a-ii.
@@ -1014,7 +1030,9 @@ the shell** (`git diff rings.html` empty — the break never enters a commit); r
 GREEN. Record both failure lines in the RUN summary as the proof the sweeps reach the page.
 **Logging:** none.
 
-### Phase 6b-iii: the page is reachable — the standards index card
+### Phase 6b-iii: the page is reachable — the standards index card — ✅ SHIPPED (`16600a9`)
+
+**Delivered (2026-09-08):** as specified; RED `Expected: 8 Received: 7`.
 
 **Goal:** a reader can find the page from the site (a page only the nav's `active` list
 knows is not reachable).
@@ -1490,3 +1508,10 @@ than assumed: the dry-tag run uses the push trigger, which runs the file at the 
   the emitted ESM had extensionless relative imports, which every tool in the gate
   tolerated and plain Node did not; the gate now spawns Node to import the package. This
   changes Phase 7's shape (a tree, not a file). Evidence: `RUN-PDS-WALKER-05-SUMMARY.md`.
+- 2026-09-08 — **Execution, G6 (6a–6b-iii).** The page exists, walks, and is gated. Two
+  things the plan did not know: `measure.record` needs the metric registered (a fifth file
+  in 6a), and axe does not fail a same-colour text break, so proving the a11y sweep took a
+  second break (`image-alt`). One process slip: a `--amend` landed on the wrong commit and
+  was repaired by recreating both commits before push. Broad validation against the real
+  network is clean, including two off-bsky hosts through the widened `connect-src`.
+  Evidence: `RUN-PDS-WALKER-06-SUMMARY.md`.
