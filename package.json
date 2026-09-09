@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./pds-walker": {
+      "types": "./lib/pds-walker/index.d.ts",
+      "default": "./lib/pds-walker/index.js"
+    }
+  },
+  "files": [
+    "lib"
+  ],
   "description": "A meta-site on building Croft SPA/PWAs: the standards and their reference implementation in one repo, built to the standards it documents.",
   "engines": {
     "node": ">=22 <23"
@@ -17,7 +26,9 @@
     "e2e:ext": "node tests/ext/run-ext.mjs",
     "serve": "node tools/serve.mjs dist 4173",
     "guide:shots": "node tools/guide-shots.mjs",
-    "test": "npm run lint && npm run typecheck && npm run unit && npm run build && npm run e2e"
+    "test": "npm run build:lib && npm run lint && npm run typecheck && npm run unit && npm run build && npm run e2e",
+    "build:lib": "tsc -p tsconfig.lib.json",
+    "prepare": "npm run build:lib"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",

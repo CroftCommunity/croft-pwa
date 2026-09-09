@@ -5,7 +5,7 @@
 **Scope:** The Croft standards/meta-site (itself a PWA) and the workspace CI reference implementation (`docs/CI.md`); documented port of the atproto OAuth client.
 Install/launch behaviour — manifest, icons, and the splash screen that is a page rather than a manifest field — is `docs/PWA-INSTALL.md`.
 **Not this repo:** the OAuth origin (skylite is the deeper reference — `docs/ATPROTO.md`).
-**Provides:** CI reference, standards pages. **Consumes:** skylite OAuth lineage.
+**Provides:** CI reference, standards pages, and the **`croft-pwa/pds-walker` package** (the repo root is the package — `CroftC/.claude/SHARED-CODE.md` rule 2; consumers pin `github:CroftCommunity/croft-pwa#<sha>`). **Consumes:** skylite OAuth lineage.
 Card + altitudes: `CroftC/.claude/ARCHITECTURE.md`.
 
 croft-pwa is a **meta-site about building Croft SPA/PWAs**, and it is itself a
@@ -23,11 +23,12 @@ GitHub Pages.
 One command runs the full check, the same way CI does:
 
 ```
-npm run test          # lint · typecheck · unit (vitest) · build · e2e (playwright)
+npm run test          # build:lib · lint · typecheck · unit (vitest) · build · e2e (playwright)
 ```
 
-Sub-parts: `npm run lint`, `npm run typecheck`, `npm run unit`, `npm run build`,
-`npm run e2e`. The `@live` tier exists (`npm run e2e:live`, local only — see `docs/ATPROTO.md`; it arrived with the atproto module
+Sub-parts: `npm run build:lib` (emits the `croft-pwa/pds-walker` package to `lib/`, first
+because lint and typecheck resolve the self-name through it), `npm run lint`, `npm run typecheck`,
+`npm run unit`, `npm run build`, `npm run e2e`. The `@live` tier exists (`npm run e2e:live`, local only — see `docs/ATPROTO.md`; it arrived with the atproto module
 in Phase 3, gated behind `npm run e2e:live`).
 
 **CI runs this exact command**, and the shape of the workflow around it is
@@ -110,6 +111,8 @@ coverage.
 - `tokens.css` / `styles.css` — brand tokens (only place with hex) / components.
 - `*.html` — one shell per destination; the page's entry bundle is `src/pages/<name>.ts`.
 - `src/nav.ts` `theme.ts` `log.ts` `version.ts` — shared shell chrome and cores.
+- `src/pds-walker/` — the library (`croft-pwa/pds-walker`): emitted to `lib/` by `build:lib`,
+  shipped by `files`, reached only through `exports`; plan `plans/2026-09-08-plan-pds-walker.md`.
 - `src/sw.ts` + `src/sw-nav.ts` — service worker; the routing decision is a pure,
   unit-tested function separate from the worker shell.
 - `tools/serve.mjs` — the zero-dep static server the e2e gate drives.

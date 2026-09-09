@@ -1,0 +1,108 @@
+# Release — the croft-pwa/pds-walker package (plan 2026-09-08 § Phase 1d; owner D3:
+# tags from the first landing). Mirrors CISS's release.yml: the full gate runs on the
+# SAME commit the artifact is packed from, the tag must equal the library's own version
+# clock (`VERSION` in src/pds-walker/index.ts — not package.json's site version), and the
+# asset ships with its sha256 alongside. Consumers still pin the tagged commit's sha
+# (SHARED-CODE.md rule 1); the tag is the name humans use.
+#
+# Tag-triggered (pds-walker-vX.Y.Z) with a workflow_dispatch escape hatch that takes an
+# EXISTING tag — a tag cut on a commit that predates this file never fires the push
+# trigger (GitHub reads workflows from the tagged commit); see docs/CI.md §8.
+name: release-pds-walker
+
+on:
+  push:
+    tags: ["pds-walker-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing pds-walker-vX.Y.Z tag to (re)build and release"
+        required: true
+        type: string
+
+# docs/CI.md rule 5: read at the workflow level, write only on the job that publishes.
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # docs/CI.md rule 7 — the gate job allows 20; packing adds little.
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: resolve tag
+        id: tag
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#pds-walker-v}" >> "$GITHUB_OUTPUT"
+
+      # The tag must say what the library says — a mismatch means the tag was cut
+      # against the wrong commit. Both values are echoed so the failure reads from the
+      # Actions log without a re-run. This block is byte-identical to the one the plan
+      # proves locally with TAG=pds-walker-v9.9.9 (exit 1) and TAG=pds-walker-v0.1.0 (exit 0).
+      - name: verify tag matches VERSION
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          # verify-block-start
+          version="${TAG#pds-walker-v}"
+          lib="$(grep -oE "VERSION = '[0-9]+\.[0-9]+\.[0-9]+'" src/pds-walker/index.ts | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+          [ -n "$lib" ] || { echo "VERSION not found in src/pds-walker/index.ts" >&2; exit 1; }
+          [ "$lib" = "$version" ] || { echo "tag says $version, VERSION says $lib" >&2; exit 1; }
+          echo "tag $version == VERSION $lib"
+          # verify-block-end
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      # `npm ci` runs `prepare`, which is `build:lib` — an emit error fails here, by design.
+      - run: npm ci
+      # The gate runs e2e, so the browser is needed exactly as ci.yml's gate job has it.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+
+      # The same gate ci.yml runs, on the tagged commit — a tag is not a gate.
+      - run: npm test
+
+      # `npm pack` names the tarball by package.json's version (the site's clock), so it
+      # is renamed to the library's tag before it becomes an asset.
+      - name: pack + checksum
+        id: package
+        run: |
+          V="${{ steps.tag.outputs.version }}"
+          OUT="/tmp/pds-walker-v$V.tgz"
+          mv "$(npm pack --silent)" "$OUT"
+          ( cd /tmp && sha256sum "pds-walker-v$V.tgz" > "pds-walker-v$V.tgz.sha256" )
+          cat "$OUT.sha256"
+          tar -tzf "$OUT" | sed 's/^/  /'
+          echo "tarball=$OUT" >> "$GITHUB_OUTPUT"
+          echo "checksum_file=$OUT.sha256" >> "$GITHUB_OUTPUT"
+          echo "checksum=$(cut -d' ' -f1 "$OUT.sha256")" >> "$GITHUB_OUTPUT"
+
+      # Release notes are the changelog section for this version (CHANGELOGS.md rule 2:
+      # `## [pds-walker X.Y.Z] — date`, written in the tag's commit; check 38 reads it).
+      - name: create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          V="${{ steps.tag.outputs.version }}"
+          sed -n "/^## \[pds-walker $V\]/,/^## /p" CHANGELOG.md | sed '$d' > /tmp/notes.md
+          [ -s /tmp/notes.md ] || { echo "CHANGELOG.md has no '## [pds-walker $V]' section" >&2; exit 1; }
+          printf '\nsha256: `%s`\n\nConsumers pin the commit: `github:CroftCommunity/croft-pwa#%s`. The full gate ran on this commit in this workflow before packing.\n' \
+            "${{ steps.package.outputs.checksum }}" "$(git rev-parse HEAD)" >> /tmp/notes.md
+          gh release create "$TAG" --title "$TAG" --notes-file /tmp/notes.md \
+            "${{ steps.package.outputs.tarball }}" "${{ steps.package.outputs.checksum_file }}" || \
+          gh release upload "$TAG" --clobber \
+            "${{ steps.package.outputs.tarball }}" "${{ steps.package.outputs.checksum_file }}"

@@ -40,7 +40,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       # The one gate, identical to `npm run test` locally:
-      # lint · typecheck · unit · build · e2e.
+      # build:lib · lint · typecheck · unit · build · e2e.
       - run: npm test
       # A browser failure is close to unreadable without its trace and
       # screenshots — without this the next step is pushing console.log commits
