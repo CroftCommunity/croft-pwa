@@ -2,8 +2,8 @@
 // database, one object store keyed by `did`. Everything crosses IndexedDB as a structured
 // clone, so reads are copies by construction. Proven in a real browser by
 // tests/e2e/pds-walker-store.spec.ts — a fake in Node would test the fake.
-import type { Did, RepoSnapshot } from '../core/rings';
-import type { Store } from './memory';
+import type { Did, RepoSnapshot } from '../core/rings.js';
+import type { Store } from './memory.js';
 
 const STORE = 'snapshots';
 

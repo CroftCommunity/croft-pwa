@@ -11,6 +11,12 @@ Contexts: site · pds-walker
 
 ## 2026-09
 
+- 2026-09-08 **pds-walker:** the walker lands — `createWalker()` walks your rings direct from
+  PDSs: ring 1 awaited, mutuals and the outer rings filling in the background as each followee
+  is listed, a rev-gated `refresh()` that re-lists only what moved, hosts reported as
+  unknown rather than rings shrunk, events for a page to draw from. Mutation-tested to 99%.
+  The emitted files now carry `.js` on every import so plain Node and unbundled browsers can
+  load the package. (plan 2026-09-08, G5)
 - 2026-09-08 **pds-walker:** the store lands — `Store` is the persistence seam, `memoryStore()`
   for tests and scripts, `indexedDbStore(name)` for the browser, proven in a real Chromium
   through the site's own CSP (snapshots survive a reload; the newer of two always wins).

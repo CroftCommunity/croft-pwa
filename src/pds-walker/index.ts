@@ -1,31 +1,28 @@
 /** pds-walker — the rev-gated ring walker. The library's own version clock (plan 2026-09-08, D3). */
 export const VERSION = '0.1.0';
 
-export { rings, RING_IDS } from './core/rings';
-export type { Did, Rev, RepoSnapshot, RingId, Ring, Logger } from './core/rings';
-export { decide } from './core/revgate';
-export type { LatestRev, Verdict } from './core/revgate';
-export { defaultPolicy, resolvePolicy, due, ring2Targets } from './core/cadence';
-export type { Policy, PolicyOverrides } from './core/cadence';
-export { resolveDid } from './transport/resolve';
-export type { ResolveDeps, Resolved } from './transport/resolve';
-export { latestRev, listFollows } from './transport/pds';
-export type { PdsDeps, Unknown } from './transport/pds';
-export { memoryStore } from './store/memory';
-export type { Store } from './store/memory';
-export { indexedDbStore } from './store/indexeddb';
+export { rings, RING_IDS } from './core/rings.js';
+export type { Did, Rev, RepoSnapshot, RingId, Ring, Logger } from './core/rings.js';
+export { decide } from './core/revgate.js';
+export type { LatestRev, Verdict } from './core/revgate.js';
+export { defaultPolicy, resolvePolicy, due, ring2Targets } from './core/cadence.js';
+export type { Policy, PolicyOverrides } from './core/cadence.js';
+export { resolveDid } from './transport/resolve.js';
+export type { ResolveDeps, Resolved } from './transport/resolve.js';
+export { latestRev, listFollows } from './transport/pds.js';
+export type { PdsDeps, Unknown } from './transport/pds.js';
+export { memoryStore } from './store/memory.js';
+export type { Store } from './store/memory.js';
+export { indexedDbStore } from './store/indexeddb.js';
 
-import { resolveDid as _resolveDid } from './transport/resolve';
-import { latestRev as _latestRev, listFollows as _listFollows } from './transport/pds';
-import { hostLimiter, defaultLogger } from './transport/limiter';
-import type { Did, Rev, Logger } from './core/rings';
+import { resolveDid as _resolveDid } from './transport/resolve.js';
+import { latestRev as _latestRev, listFollows as _listFollows } from './transport/pds.js';
+import { hostLimiter, defaultLogger } from './transport/limiter.js';
+import type { Logger } from './core/rings.js';
 
-/** What the walker needs from the network — three calls, each honest on failure. */
-export type Transport = {
-  resolve(did: string): Promise<{ readonly pds: string } | { readonly unknown: string }>;
-  latestRev(pds: string, did: string): Promise<Rev | { readonly unknown: string }>;
-  listFollows(pds: string, did: string): Promise<readonly Did[] | { readonly unknown: string }>;
-};
+import type { Transport } from './walker.js';
+export { createWalker } from './walker.js';
+export type { Transport, Walker, WalkerDeps, HostState, Progress, WalkerEvent } from './walker.js';
 
 /** Options for the fetch-backed transport. `log` defaults to the library's console posture; a page passes its own. */
 export type FetchTransportOptions = {

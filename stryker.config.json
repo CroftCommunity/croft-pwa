@@ -5,7 +5,8 @@
     "src/pds-walker/core/**/*.ts",
     "src/pds-walker/transport/limiter.ts",
     "src/pds-walker/transport/pds.ts",
-    "src/pds-walker/transport/resolve.ts"
+    "src/pds-walker/transport/resolve.ts",
+    "src/pds-walker/walker.ts"
   ],
   "testRunner": "vitest",
   "vitest": {

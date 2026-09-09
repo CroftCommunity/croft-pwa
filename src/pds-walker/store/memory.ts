@@ -1,7 +1,7 @@
 // The store (plan 2026-09-08 § Phase 4a): the persistence seam the walker reads and writes
 // snapshots through, and its memory implementation for tests and Node. `Store` lives here
 // (not in a types file of its own) so the seam is exported in the phase that adds it.
-import type { Did, RepoSnapshot } from '../core/rings';
+import type { Did, RepoSnapshot } from '../core/rings.js';
 
 /** Where snapshots live between sessions. Every method returns copies; `put` keeps the newer of two. */
 export type Store = {
