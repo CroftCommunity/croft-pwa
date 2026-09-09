@@ -108,12 +108,15 @@ install a subfolder). Until this lands, audit check 47e NOTEs the repo every run
       installs), and a `prepare` script that builds what `exports` points at. *Landed 2026-09-08
       (G1: 1a–1d-ii). `private: true` stays: it blocks `npm publish` only; a git install at a
       pinned commit is unaffected (plan V6).*
-- [ ] The reference site imports the library through its own export path, not a relative
+- [x] The reference site imports the library through its own export path, not a relative
       `./src/...` import — that is what proves the export works (rule 2's last clause;
-      uncheckable by script, so it is review).
-- [ ] First export: the rev-gated ring walker
+      uncheckable by script, so it is review). *Done 2026-09-08 (G6): `src/pages/rings.ts`
+      imports from `croft-pwa/pds-walker`.*
+- [x] First export: the rev-gated ring walker
       (`discovery/alpha/research/ring-walk-sans-relay-2026-09.md` § 6–7). Consumers pin
-      `github:CroftCommunity/croft-pwa#<sha>`: forage, pdsview, the social-tree site.
+      `github:CroftCommunity/croft-pwa#<sha>`: forage, pdsview, the social-tree site. *Done
+      2026-09-08 (G2–G5); first release `pds-walker-v0.1.0` (G7). No consumer has pinned it
+      yet — forage's adoption is Phase 7 of the plan, under forage's own plan.*
 - [ ] The eight `Ported from skylite` files (`src/atproto/oauth/*`, `src/atproto/read.ts`,
       `src/crypto/vault.ts`, `src/crypto/sealedbox.ts`) are register rows in SHARED-CODE.md
       § Register of copies. Once the package exists they become the canonical home and
