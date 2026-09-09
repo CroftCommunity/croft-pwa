@@ -80,6 +80,11 @@ const PAGES = [
   },
   { html: 'metrics.html', entry: 'src/pages/metrics.ts', jsToken: '%METRICS_JS%', sriToken: '%METRICS_JS_SRI%' },
   { html: 'atproto.html', entry: 'src/pages/atproto.ts', jsToken: '%ATPROTO_JS%', sriToken: '%ATPROTO_JS_SRI%' },
+  // The pds-walker library's reference page (plan 2026-09-08, G6). THE ONE per-page CSP
+  // exception (owner OQ7 a, 2026-09-08): it reads from arbitrary PDS hosts, signed out,
+  // holding no session or secret, so its connect-src alone widens to any https: origin.
+  // Every other page keeps the allowlist; docs/SECURITY.md § CSP records the exception.
+  { html: 'rings.html', entry: 'src/pages/rings.ts', jsToken: '%RINGS_JS%', sriToken: '%RINGS_JS_SRI%', connectSrc: 'https:' },
   {
     html: 'content-fetch.html',
     entry: 'src/pages/content-fetch.ts',
@@ -177,7 +182,7 @@ const jsSri = Object.fromEntries(
 const PROVIDER_ORIGINS = JSON.parse(readFileSync(join(root, 'src/signin/providers.json'), 'utf8'))
   .providers.map((p) => p.entryway)
   .filter((o) => o !== 'https://bsky.social');
-const csp = [
+const cspFor = (page) => [
   "default-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
@@ -194,7 +199,8 @@ const csp = [
   // sign-in sheet's REGISTERED providers can be, and are, read from the same
   // JSON the sheet renders from — each is its own authorization server (probed
   // 2026-08-29), so discovery, PAR and token all stay inside this allowlist.
-  `connect-src 'self' https://public.api.bsky.app https://plc.directory https://bsky.social https://*.host.bsky.network ${PROVIDER_ORIGINS.join(' ')}`,
+  // A page entry may widen connect-src (rings.html: `https:`); nothing else widens.
+  `connect-src 'self' https://public.api.bsky.app https://plc.directory https://bsky.social https://*.host.bsky.network ${PROVIDER_ORIGINS.join(' ')}${page.connectSrc ? ` ${page.connectSrc}` : ''}`,
   "worker-src 'self'",
   `script-src 'self' 'sha256-${sha256base64(THEME_INIT_JS)}'`,
 ].join('; ');
@@ -204,7 +210,7 @@ const themeInitTag = `<script>${THEME_INIT_JS}</script>`;
 for (const p of PAGES) {
   const template = readFileSync(join(root, p.html), 'utf8');
   const html = template
-    .replaceAll('%CSP%', csp)
+    .replaceAll('%CSP%', cspFor(p))
     .replaceAll('%THEME_INIT%', themeInitTag)
     .replaceAll('%STYLES%', stylesHref)
     .replaceAll('%STYLES_SRI%', stylesSri)

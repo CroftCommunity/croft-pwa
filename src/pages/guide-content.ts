@@ -156,4 +156,47 @@ export const GUIDE: readonly GuideEntry[] = [
       },
     ],
   },
+  {
+    testid: 'guide-rings',
+    title: 'Rings: your social graph, walked from the data servers',
+    toc: 'Rings',
+    blocks: [
+      {
+        kind: 'prose',
+        text:
+          'The Rings page takes a handle and walks that account\u2019s social rings ' +
+          'straight from the data servers that hold the records \u2014 no relay, no ' +
+          'AppView in the middle. A ring is a set of accounts at a distance from you: ' +
+          'your mutuals (people who follow you back), your follows, and, behind ' +
+          '\u201cMore rings\u201d, one hop out (everyone your mutuals follow) and two ' +
+          'hops out (everyone your follows follow). Global is the worldwide view, ' +
+          'which only an AppView can answer; the page says so rather than pretend.',
+      },
+      {
+        kind: 'prose',
+        text:
+          '\u201cAs of\u201d is the oldest moment any source in that ring was read, so it ' +
+          'is the honest age of the whole ring, not its freshest part. ' +
+          '\u201cComplete\u201d means every server the ring depends on answered; ' +
+          '\u201cincomplete\u201d means at least one did not, and the ring shows what ' +
+          'the reachable servers said. A ring is never emptied because a server was down.',
+      },
+      {
+        kind: 'note',
+        text:
+          'The Hosts panel lists every server that could not be reached, with the ' +
+          'reason and the time it went unknown. A server there is a gap in the ring, ' +
+          'not a verdict on the account \u2014 the page retries it on the next walk.',
+      },
+      {
+        kind: 'steps',
+        items: [
+          'Enter a handle (for example bsky.app) and choose Walk.',
+          'Read Mutuals and Follows first; they arrive within a second or two.',
+          'Open More rings to watch the outer rings fill as each followed account is listed.',
+          'Check the Hosts panel if a ring says incomplete.',
+        ],
+      },
+    ],
+  },
 ];

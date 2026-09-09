@@ -11,6 +11,14 @@ Contexts: site · pds-walker
 
 ## 2026-09
 
+- 2026-09-08 **site:** **Rings** — a new standards page (`rings.html`): enter a handle and
+  watch that account's social rings walked live from the data servers, no relay and no
+  AppView in the middle; each ring says when it was read and whether every server answered,
+  and the Hosts panel names what could not be reached. It is the pds-walker library's
+  reference page and imports the walker through the package's own export path. The page
+  alone carries a `connect-src https:` policy (the one per-page CSP exception —
+  `docs/SECURITY.md`). A guide chapter explains rings, "as of", and unknown hosts.
+  (plan 2026-09-08, G6)
 - 2026-09-08 **pds-walker:** the walker lands — `createWalker()` walks your rings direct from
   PDSs: ring 1 awaited, mutuals and the outer rings filling in the background as each followee
   is listed, a rev-gated `refresh()` that re-lists only what moved, hosts reported as
