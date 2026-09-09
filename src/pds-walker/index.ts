@@ -7,3 +7,5 @@ export { decide } from './core/revgate';
 export type { LatestRev, Verdict } from './core/revgate';
 export { defaultPolicy, resolvePolicy, due, ring2Targets } from './core/cadence';
 export type { Policy, PolicyOverrides } from './core/cadence';
+export { resolveDid } from './transport/resolve';
+export type { ResolveDeps, Resolved } from './transport/resolve';
