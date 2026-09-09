@@ -15,6 +15,7 @@ for (const path of [
   '/agent-method.html',
   '/content-fetch.html',
   '/metrics.html',  '/atproto.html',
+  '/rings.html',
 ]) {
   test(`${path}: no CSP violations, no cross-origin scripts`, async ({ page }) => {
     await page.addInitScript(() => {
@@ -40,5 +41,17 @@ for (const path of [
         .filter((src) => new URL(src).origin !== location.origin),
     );
     expect(crossOrigin).toEqual([]);
+
+    // The one per-page CSP (plan 2026-09-08 § 6a-ii, owner OQ7 a): rings.html alone may
+    // connect to any https: origin — it reads from arbitrary PDS hosts, signed out, holding
+    // no session or secret. Every other page keeps the static allowlist. Both directions,
+    // so a widening that leaks into the shared list dies here.
+    const connectSrc = await page.evaluate(() => {
+      const meta = document.querySelector<HTMLMetaElement>('meta[http-equiv="Content-Security-Policy"]');
+      const directive = (meta?.content ?? '').split(';').map((d) => d.trim()).find((d) => d.startsWith('connect-src')) ?? '';
+      return directive.split(/\s+/).slice(1);
+    });
+    if (path === '/rings.html') expect(connectSrc).toContain('https:');
+    else expect(connectSrc).not.toContain('https:');
   });
 }

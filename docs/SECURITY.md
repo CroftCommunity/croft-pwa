@@ -28,6 +28,16 @@ script-src 'self' 'sha256-<pre-paint theme init>'
   ignore it there (it must be an HTTP header). The static host applies it. This
   is noted so a reviewer does not read the omission as a gap.
 
+**The one per-page exception (2026-09-08).** `rings.html` alone carries `connect-src …
+https:` — it reads follow records from arbitrary PDS hosts (any `did:plc` or `did:web`
+account's server), signed out, holding no session or secret, so no static allowlist can
+name its hosts. The policy is composed per page by `cspFor(page)` in `build.mjs`; the
+`rings.html` entry sets `connectSrc: 'https:'` and no other entry sets anything, so every
+other page's policy is byte-identical to the block above. `default-src 'none'` still
+governs the page's other directives — `script-src`, `style-src`, `img-src` are untouched —
+so the widening admits fetches, not code. `tests/e2e/csp.spec.ts` asserts it in both
+directions: the token is present on `rings.html` and absent on every other page.
+
 ## Subresource Integrity
 
 The stylesheet and every module script carry a `sha384` `integrity` attribute
