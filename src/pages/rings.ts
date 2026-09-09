@@ -1,11 +1,15 @@
 // Rings: the pds-walker library's reference page (plan 2026-09-08 § Phase 6a — the shell).
 // Enter a handle; the page walks that account's rings live from the data servers, drawing
 // each ring as it fills, with an "as of" stamp, and lists the hosts it could not reach.
-// This phase is the shell only: cards with placeholders, no library import yet (6a-iii).
+// The walker is imported through the package's own export path — the reference proves the
+// export (SHARED-CODE.md rule 2) — and is handed this page's logger, so its lines carry the
+// `[croft]` tag and obey `?debug=1` like every other line here.
 import { mountShell } from '../nav';
 import { registerServiceWorker } from '../sw-register';
 import { log } from '../log';
 import { measure } from '../measure/measure';
+import { resolveHandle, AtprotoReadError } from '../atproto/read';
+import { createWalker, createFetchTransport, indexedDbStore, type Ring, type RingId, type HostState, type Progress, type Walker } from 'croft-pwa/pds-walker';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -63,7 +67,65 @@ function intro(): HTMLElement {
   progress.setAttribute('aria-live', 'polite');
   progress.dataset['progress'] = '';
   panel.append(form, progress);
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    void startWalk(input.value.trim(), progress);
+  });
   return panel;
+}
+
+// ---- the walk ------------------------------------------------------------------------
+const SHOWN: readonly RingId[] = ['mut', 'fol', 'hop', 'hop2'];
+let current: Walker | null = null;
+const fmtTime = (ms: number): string => new Date(ms).toLocaleTimeString();
+
+function renderRing(r: Ring): void {
+  const card = document.querySelector(`[data-ring="${r.id}"]`);
+  if (card === null) return;
+  const count = card.querySelector('[data-count]');
+  const asOf = card.querySelector('[data-asof]');
+  // Counts exclude the account itself: "follows" means everyone you follow, not you.
+  if (count !== null) count.textContent = String(Math.max(0, r.members.size - 1));
+  if (asOf !== null) asOf.textContent = r.asOf === 0 ? 'as of —' : `as of ${fmtTime(r.asOf)} · ${r.complete ? 'complete' : 'incomplete'}`;
+}
+function renderHosts(hosts: readonly HostState[]): void {
+  const panel = document.querySelector('[data-hosts]');
+  if (panel === null) return;
+  const unknown = hosts.filter((h) => h.state === 'unknown');
+  const reached = hosts.length - unknown.length;
+  panel.replaceChildren(el('h2', undefined, 'Hosts'));
+  if (hosts.length === 0) { panel.append(el('p', undefined, 'No hosts reached yet.')); return; }
+  panel.append(el('p', undefined, `${reached} reached${unknown.length > 0 ? `, ${unknown.length} unknown` : ''}.`));
+  if (unknown.length > 0) {
+    const list = el('ul');
+    for (const h of unknown) list.append(el('li', undefined, `${h.host} — unknown since ${fmtTime(h.since)}: ${h.reason ?? 'no reason given'}`));
+    panel.append(list);
+  }
+}
+async function startWalk(handle: string, progress: HTMLElement): Promise<void> {
+  if (handle === '') { progress.textContent = 'Enter a handle to begin.'; return; }
+  current?.stop();
+  progress.textContent = 'Resolving the handle…';
+  let did: string;
+  try {
+    did = await resolveHandle(handle);
+  } catch (err) {
+    log.warn('rings: resolveHandle failed', err instanceof AtprotoReadError ? err.message : err);
+    progress.textContent = 'That handle could not be resolved.';
+    return;
+  }
+  log.info('rings: walk started');
+  const walker = createWalker({ transport: createFetchTransport({ log }), store: indexedDbStore('croft-pwa-rings'), log });
+  current = walker;
+  walker.on('ring', (e) => { const r = e as Ring; if (SHOWN.includes(r.id)) renderRing(r); });
+  walker.on('host', () => renderHosts(walker.hosts()));
+  walker.on('progress', (e) => { const p = e as Progress; progress.textContent = `${p.done} of ${p.total} followees listed.`; renderHosts(walker.hosts()); });
+  progress.textContent = 'Walking ring 1…';
+  await walker.walk(did as `did:${string}`);
+  renderHosts(walker.hosts());
+  if (walker.ring('fol').members.size <= 1) progress.textContent = 'Ring 1 read; nothing to walk further.';
+  await walker.idle();
+  renderHosts(walker.hosts());
 }
 
 function hosts(): HTMLElement {

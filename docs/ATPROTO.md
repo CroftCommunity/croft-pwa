@@ -35,7 +35,8 @@ in rule 7). Those are static, so they can be; each is its own authorization
 server, so discovery, PAR and token stay inside the list. Arbitrary non-bsky PDS
 hosts still cannot be statically allowlisted in a `<meta>` CSP; the read demo
 goes through the AppView, which covers them. An app that must read from or sign
-in at an arbitrary PDS needs a header-level CSP or a per-host relaxation.
+in at an arbitrary PDS needs a header-level CSP or a per-host relaxation. The rings page
+(`rings.html`) is that app, and takes the per-page relaxation — `docs/SECURITY.md` § CSP.
 
 ## Testing
 
