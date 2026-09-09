@@ -51,7 +51,7 @@ export type WalkerDeps = {
 };
 
 const hostOf = (pds: string): string => { try { return new URL(pds).host; } catch { return pds; } };
-const directoryOf = (did: string): string => (did.startsWith('did:web:') ? did.slice('did:web:'.length).split(':')[0] ?? 'did:web' : 'plc.directory');
+const directoryOf = (did: string): string => (did.startsWith('did:web:') ? did.slice('did:web:'.length).replace(/:.*/, '') : 'plc.directory');
 const sameRing = (a: Ring, b: Ring): boolean =>
   a.complete === b.complete && a.asOf === b.asOf && a.members.size === b.members.size && [...a.members].every((d) => b.members.has(d));
 
@@ -75,9 +75,8 @@ export function createWalker(deps: WalkerDeps): Walker {
 
   // Recompute from the in-memory mirror of the store; emit only the rings that changed, in
   // chain order — so for one listing a `hop` event always precedes the `hop2` event.
-  const compute = (): void => {
-    if (me === undefined) return;
-    const next = computeRings({ me, snapshots: snaps });
+  const compute = (who: Did): void => {
+    const next = computeRings({ me: who, snapshots: snaps });
     for (const id of RING_IDS) {
       const was = current[id]; const is = next[id];
       if (sameRing(was, is)) continue;
@@ -125,7 +124,7 @@ export function createWalker(deps: WalkerDeps): Walker {
   const listRepo = async (did: Did, pds: string, rev: string): Promise<void> => {
     const follows = await transport.listFollows(pds, did);
     if ('unknown' in follows) { markUnknown(hostOf(pds), follows.unknown); return; }
-    markOk(hostOf(pds));
+    // (the host was marked ok by the rev check that always precedes a listing)
     await remember({ did, pds, rev, follows: [...follows], fetchedAt: now() });
   };
   // Check the rev and, if it moved (or the repo is new), list it — the unit of the walk.
@@ -140,58 +139,62 @@ export function createWalker(deps: WalkerDeps): Walker {
     await Promise.all(Array.from({ length: Math.max(1, Math.min(n, items.length)) }, worker));
   };
   // The background fill: list each followee, recompute after each, report progress.
-  const fill = (followees: readonly Did[]): Promise<void> => {
+  const fill = (who: Did, followees: readonly Did[]): Promise<void> => {
     let done = 0;
     const job = parallel(followees, policy.ring2Parallel, async (f) => {
       await syncRepo(f);
       done++;
-      compute();
+      compute(who);
       emit('progress', { done, total: followees.length });
-    }).then(() => { compute(); });
+    });
     background = background.then(() => job);
     return job;
   };
-  const followeesOf = (): readonly Did[] => (me === undefined ? [] : (snaps.get(me)?.follows ?? []));
+  const followeesOf = (who: Did): readonly Did[] => snaps.get(who)?.follows ?? [];
 
   return {
     ring: (id) => current[id],
     async load(who) {
       me = who; stopped = false;
       for (const s of await store.all()) snaps.set(s.did, s);
-      compute();
+      compute(who);
     },
     async walk(who) {
       await this.load(who);
       log.debug('pds-walker: walk', who);
       await syncRepo(who);
-      compute();
-      void fill(followeesOf());
+      compute(who);
+      void fill(who, followeesOf(who));
     },
     async refresh() {
       if (me === undefined) return;
+      const who: Did = me;
       stopped = false;
-      const mine = snaps.get(me);
+      const mine = snaps.get(who);
       // A `me` with no snapshot yet (its directory or host was unknown at walk time) is always
       // due: refresh is how a transient failure at the root gets retried.
-      const dueMe: Did[] = mine === undefined ? [me] : dueRepos({ snapshots: [mine], now: now(), policy, ring: 'me' });
-      const known = followeesOf().map((f) => snaps.get(f)).filter((s): s is RepoSnapshot => s !== undefined);
+      const dueMe: Did[] = mine === undefined ? [who] : dueRepos({ snapshots: [mine], now: now(), policy, ring: 'me' });
+      const known = followeesOf(who).map((f) => snaps.get(f)).filter((s): s is RepoSnapshot => s !== undefined);
       const dueFollowees = dueRepos({ snapshots: known, now: now(), policy, ring: 'fol' });
       const dueList: Did[] = [...dueMe, ...dueFollowees];
-      const moved: Did[] = []; let kept = 0, unknown = 0;
-      const checks = new Map<Did, RevCheck>();
+      type Mover = { did: Did; pds: string; rev: string };
+      const movers: Mover[] = []; let kept = 0, unknown = 0;
       await parallel(dueList, policy.ring2Parallel, async (d) => {
         const c = await checkRev(d);
-        checks.set(d, c);
-        if (c.verdict === 'relist') moved.push(d); else if (c.verdict === 'keep') kept++; else unknown++;
+        if (c.verdict === 'relist') movers.push({ did: d, pds: c.pds, rev: c.rev });
+        else if (c.verdict === 'keep') kept++;
+        else if (c.verdict === 'unknown') unknown++;
       });
-      const before = new Set(followeesOf());
-      await parallel(ring2Targets({ moved }), policy.ring2Parallel, async (d) => {
-        const c = checks.get(d);
-        if (c?.verdict === 'relist') await listRepo(d, c.pds, c.rev);
+      const before = new Set(followeesOf(who));
+      const byDid = new Map(movers.map((m) => [m.did, m] as const));
+      // ring2Targets dedupes the movers; every target is a mover by construction.
+      await parallel(ring2Targets({ moved: movers.map((m) => m.did) }), policy.ring2Parallel, async (d) => {
+        const m = byDid.get(d) as Mover;
+        await listRepo(m.did, m.pds, m.rev);
       });
-      compute();
-      log.info('pds-walker: refresh', { due: dueList.length, moved: moved.length, kept, unknown });
-      void fill(followeesOf().filter((f) => !before.has(f)));
+      compute(who);
+      log.info('pds-walker: refresh', { due: dueList.length, moved: movers.length, kept, unknown });
+      void fill(who, followeesOf(who).filter((f) => !before.has(f)));
     },
     idle: () => background,
     hosts: () => [...hostStates.values()],

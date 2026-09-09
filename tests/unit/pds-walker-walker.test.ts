@@ -206,7 +206,7 @@ describe('createWalker() — refresh', () => {
     expect(t.calls.filter((c) => c.startsWith('rev ')).sort()).toEqual(['rev did:plc:f', 'rev did:plc:m', 'rev did:plc:me', 'rev did:plc:n']);
     expect(t.calls.filter((c) => c.startsWith('list '))).toEqual(['list did:plc:f']);
     expect(w.ring('hop2').members.has('did:plc:z')).toBe(true);
-    expect(log.lines.some(([l, a]) => l === 'debug' && a[0] === 'pds-walker: rev moved' && a[1] === 'did:plc:f' && a[2] === 'r-f-1' && a[3] === 'r-f-2')).toBe(true);
+    expect(log.lines.filter(([l, a]) => l === 'debug' && a[0] === 'pds-walker: rev moved')).toEqual([['debug', ['pds-walker: rev moved', 'did:plc:f', 'r-f-1', 'r-f-2']]]); // kept repos log nothing (M3)
     const refreshInfo = log.lines.find(([l, a]) => l === 'info' && a[0] === 'pds-walker: refresh' && (a[1] as { due: number }).due === 4);
     expect(refreshInfo?.[1][1]).toEqual({ due: 4, moved: 1, kept: 3, unknown: 0 });
   });
@@ -249,6 +249,19 @@ describe('createWalker() — refresh', () => {
     await w.refresh(); await w.idle();
     expect(w.ring('fol').members.has('did:plc:new')).toBe(true);
     expect(w.ring('hop2').members.has('did:plc:q')).toBe(true);
+  });
+  it('(M3) a same-size change of members emits a ring event (X replaced by X2), and an unsubscribed ring listener hears nothing', async () => {
+    let now = 10_000_000;
+    const t = fakeTransport(graph()); const w = createWalker({ transport: t, store: memoryStore(), log: recordingLogger(), now: () => now, policy: { refreshMs: { me: 1, mut: 1, fol: 1, hop: 1, hop2: 1 } } });
+    await w.walk(ME); await w.idle();
+    const heard: string[] = []; const off = w.on('ring', (e) => heard.push((e as Ring).id));
+    const off2 = w.on('ring', () => { throw new Error('unsubscribed listener was called'); }); off2();
+    t.graph['did:plc:f'] = { pds: B, rev: 'r-f-2', follows: ['did:plc:x2'] }; now += 10;
+    await w.refresh();
+    expect(w.ring('hop2').members.has('did:plc:x2')).toBe(true);
+    expect(w.ring('hop2').members.has('did:plc:x')).toBe(false);
+    expect(heard).toContain('hop2');
+    off();
   });
   it('a new walker over a warm store answers from the store before any network call', async () => {
     const store = memoryStore(); const t = fakeTransport(graph());
