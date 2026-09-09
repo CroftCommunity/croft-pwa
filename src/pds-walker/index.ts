@@ -9,3 +9,5 @@ export { defaultPolicy, resolvePolicy, due, ring2Targets } from './core/cadence'
 export type { Policy, PolicyOverrides } from './core/cadence';
 export { resolveDid } from './transport/resolve';
 export type { ResolveDeps, Resolved } from './transport/resolve';
+export { latestRev, listFollows } from './transport/pds';
+export type { PdsDeps, Unknown } from './transport/pds';
