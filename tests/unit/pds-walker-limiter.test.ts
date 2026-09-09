@@ -142,6 +142,25 @@ describe('hostLimiter — RateLimit headers pause a host until reset', () => {
     limiter.observe('h.example', mk(clock.now() + 3_000)); // a new pause after resume
     expect(log.lines.filter(([l]) => l === 'warn')).toHaveLength(2);
   });
+  it('non-numeric header values do not pause (M2)', async () => {
+    const clock = fakeClock(); const log = recordingLogger();
+    const limiter = hostLimiter({ perHost: 4, now: clock.now, sleep: clock.sleep, log });
+    limiter.observe('h.example', new Response(LATEST, { status: 200, headers: { 'ratelimit-remaining': 'abc', 'ratelimit-reset': String((clock.now() + 9_000) / 1000) } }));
+    limiter.observe('h.example', new Response(LATEST, { status: 200, headers: { 'ratelimit-remaining': '1', 'ratelimit-reset': 'soon' } }));
+    await limiter.run('h.example', () => Promise.resolve(1));
+    expect(clock.sleeps).toEqual([]);
+    expect(log.lines).toEqual([]);
+  });
+  it('a LATER reset seen during a pause extends the pause without a second warn (M2)', async () => {
+    const clock = fakeClock(); const log = recordingLogger();
+    const limiter = hostLimiter({ perHost: 4, now: clock.now, sleep: clock.sleep, log });
+    const mk = (resetMs: number) => new Response(LATEST, { status: 200, headers: { 'ratelimit-remaining': '3', 'ratelimit-reset': String(resetMs / 1000) } });
+    limiter.observe('h.example', mk(clock.now() + 2_000));
+    limiter.observe('h.example', mk(clock.now() + 7_000));
+    await limiter.run('h.example', () => Promise.resolve(1));
+    expect(clock.sleeps).toEqual([7_000]);
+    expect(log.lines.filter(([l]) => l === 'warn')).toHaveLength(1);
+  });
   it('a response with only one of the two headers does not pause (both are needed)', async () => {
     const clock = fakeClock(); const log = recordingLogger();
     const limiter = hostLimiter({ perHost: 4, now: clock.now, sleep: clock.sleep, log });

@@ -106,8 +106,8 @@ describe('listFollows() — com.atproto.repo.listRecords over app.bsky.graph.fol
     expect(await listFollows(PDS, DID, { fetchImpl: fakeFetch([[/listRecords/, [200, j({})]]]) })).toEqual([]);
     expect(await listFollows(PDS, DID, { fetchImpl: fakeFetch([[/listRecords/, [200, 'null']]]) })).toEqual([]);
   });
-  it('a record without a subject is skipped, not turned into "undefined"', async () => {
-    const r = await listFollows(PDS, DID, { fetchImpl: fakeFetch([[/listRecords/, [200, j({ records: [{ uri: 'x', cid: 'y', value: { $type: 'app.bsky.graph.follow' } }, rec('k', 'did:plc:ok')] })]]]) });
+  it('a record without a subject, a null record, or a non-DID subject is skipped (M2)', async () => {
+    const r = await listFollows(PDS, DID, { fetchImpl: fakeFetch([[/listRecords/, [200, j({ records: [{ uri: 'x', cid: 'y', value: { $type: 'app.bsky.graph.follow' } }, null, rec('k', 'at://not-a-did'), rec('k2', 'did:plc:ok')] })]]]) });
     expect(r).toEqual(['did:plc:ok']);
   });
 });

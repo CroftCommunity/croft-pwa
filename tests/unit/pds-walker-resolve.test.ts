@@ -50,7 +50,13 @@ describe('resolveDid() — a DID to its PDS, or unknown', () => {
     const html = '<html><head><script type="text/javascript">location.replace("https://block.opendns.com/?url=847077';
     const r = await resolveDid('did:plc:intercepted', { fetchImpl: fakeFetch({ 'did:plc:intercepted': [200, html, 'text/html'] }) });
     expect('unknown' in r).toBe(true);
-    if ('unknown' in r) expect(r.unknown).toMatch(/JSON/);
+    if ('unknown' in r) expect(r.unknown).toMatch(/^bad JSON in DID document: /);
+  });
+  it('a fetch that rejects with a non-Error value → unknown carrying String(value) (M2)', async () => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- the point is a non-Error value
+    const throwing: typeof fetch = () => { throw 'socket hang up'; };
+    const r = await resolveDid('did:plc:odd', { fetchImpl: throwing });
+    expect(r).toEqual({ unknown: 'socket hang up' });
   });
   it('an unsupported DID method → unknown', async () => {
     const r = await resolveDid('did:key:zabc', { fetchImpl: fakeFetch({}) });

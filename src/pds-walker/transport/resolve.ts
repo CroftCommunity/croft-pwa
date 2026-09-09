@@ -2,7 +2,7 @@
 // honest `{ unknown: reason }`. A WRAPPER over `src/atproto/read.ts`'s `resolvePds`, which
 // already does did:plc (plc.directory), did:web (.well-known, path form too), the
 // `#atproto_pds` pick and the slash trim — SHARED-CODE.md rule 4 applies inside a repo too.
-import { resolvePds, AtprotoReadError } from '../../atproto/read';
+import { resolvePds } from '../../atproto/read';
 
 /** Injectable fetch, so every test runs with no network. Declared here so the emitted `.d.ts` imports nothing from read.ts. */
 export type ResolveDeps = { readonly fetchImpl?: typeof fetch };
@@ -13,9 +13,8 @@ export type Resolved = { readonly pds: string } | { readonly unknown: string };
 // The reason must read on its own: the walker (Phase 5) logs it once per host, and the
 // rings page shows it. A status when there is one, the cause when there is not.
 function reasonOf(e: unknown): string {
-  if (e instanceof AtprotoReadError) return e.message;
   if (e instanceof SyntaxError) return `bad JSON in DID document: ${e.message}`;
-  if (e instanceof Error) return e.message;
+  if (e instanceof Error) return e.message; // AtprotoReadError included: its message already names status or cause
   return String(e);
 }
 
