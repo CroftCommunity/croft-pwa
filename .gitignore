@@ -8,6 +8,7 @@
 node_modules/
 dist/
 lib/
+.stryker-tmp/
 
 # Playwright
 /test-results/

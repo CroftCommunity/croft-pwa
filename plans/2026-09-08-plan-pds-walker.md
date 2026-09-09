@@ -2,7 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** EXECUTING — G1 (1a, 1b, 1c, 1d, 1d-ii) shipped 2026-09-08 on `claude/pds-walker-plan`; landing G1 (RUN summary, claim, PR). 2a next after G1 lands. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
+**Status:** EXECUTING — G1 landed (`4e8e528`); G2 (2a, 2b, 2c, M1) shipped 2026-09-08 on `claude/pds-walker-g2`, landing; 3a next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
 
 Format note: this plan follows the `phase-plan` skill's template (Problem · Reasoning ·
 Verified Assumptions · Documentation Impact · Concurrency Map · Phases with call chain,
@@ -15,6 +15,10 @@ ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer
 
 | phase | outcome | commit | note |
 |---|---|---|---|
+| 2a | ✅ | `3318779` | five rings, hop and hop2, honest asOf; seeded property test |
+| 2b | ✅ | `cac6ed7` | the rev gate |
+| 2c | ✅ | `6ea5741` | cadence, resolvePolicy, due, ring2Targets |
+| M1 | ✅ | `1a06a91` | stryker on core/: 90.1% → 100% after triage; qs override |
 | 1a | ✅ | `cdb45cf` | `build:lib` emits `lib/pds-walker/`; gate reordered with it first; both predicted REDs observed |
 | 1d | ✅ | `a5c5f52` | `release-pds-walker.yml` (tag == `VERSION`, gate, pack → renamed asset + sha256, notes from the changelog section); `Contexts: site · pds-walker` + 12 entries prefixed (RED 12 FLAGs → quiet); README |
 | 1d-ii | ✅ | `fbbf7af` | `ci.yml` comment; TODO § 3 box 1 + `private: true` why-line |
@@ -499,7 +503,9 @@ inert, but the gate is the boundary).
 
 ---
 
-### Phase 2a: the pure core — rings and "as of"
+### Phase 2a: the pure core — rings and "as of" — ✅ SHIPPED (`3318779`; M1 triage `1a06a91`)
+
+**Delivered (2026-09-08):** as specified with OQ6 (c). RED text was `rings is not a function` — vitest's ESM interop yields `undefined` for a missing named export, not the `SyntaxError` the plan predicted (recorded; the same shape recurred in 2b/2c). Property test uses a seeded LCG generator (OQ1, no dependency). After M1: mutuals are resolved as snapshots (a mutual has one by construction), which removed an unreachable `?? []`; three test rows added (hop2 membership with an unknown followee; `Ring.id` read for every ring).
 
 **Goal:** given snapshots, compute `me`/`mut`/`fol`/`hop`/`hop2` with the containment chain
 and the honest `asOf`. *(Pass 3 — OQ6 decided (c) by the owner 2026-09-08: two ids.)*
@@ -537,7 +543,9 @@ order in Phase 5 and 6a, not a second walk.
 **Done when:** (1) Behavioral: the export computes rings for the research's worked example. (2) Verification: `npx vitest run tests/unit/pds-walker-rings.test.ts`; `npm test`.
 **Validation:** Narrow.
 
-### Phase 2b: the pure core — the rev gate
+### Phase 2b: the pure core — the rev gate — ✅ SHIPPED (`cac6ed7`; M1 triage `1a06a91`)
+
+**Delivered (2026-09-08):** as specified; RED `decide is not a function`. After M1 the `=== undefined ||` clause was removed as subsumed by the `typeof` check (an equivalent mutant).
 
 **Goal:** decide, from a stored snapshot and a fresh rev, whether to re-list.
 **Changes:**
@@ -559,7 +567,9 @@ with a snapshot → `'unknown'` and with no snapshot → `'relist'` (the branch 
 a swap of the first two checks dies here).
 **Logging:** none — pure. (The walker logs the verdicts, Phase 5.)
 
-### Phase 2c: the pure core — cadence
+### Phase 2c: the pure core — cadence — ✅ SHIPPED (`6ea5741`; M1 triage `1a06a91`)
+
+**Delivered (2026-09-08):** as specified, plus `resolvePolicy(overrides)` as the merge function (`PolicyOverrides` type). RED `resolvePolicy is not a function`. The first commit of this phase carried a red test (the Map case asked for the `me` ring at 5 s against a 60 s cadence — a test error) because the command chain did not stop on failure; amended before any push with the gate green. After M1: `mut`'s cadence value pinned.
 
 **Goal:** per-ring refresh intervals and "which repos are due now".
 **Changes:**
@@ -577,7 +587,9 @@ tests/unit/pds-walker-cadence.test.ts` — expected `does not provide an export 
 'defaultPolicy'`; then `cadence.ts` + re-export; GREEN.
 **Logging:** none — pure.
 
-### Checkpoint M1 (after 2c): mutation testing of `core/` — inserted in Pass 3
+### Checkpoint M1 (after 2c): mutation testing of `core/` — inserted in Pass 3 — ✅ DONE (`d31b1cc` config, `1a06a91` triage, `1424cc1` override)
+
+**Delivered (2026-09-08):** option (a) — `vitest.stryker.config.ts` aliases the export path to `src/`. Round 1: 90.1% (91 killed, 9 survived, 1 uncovered). Triage: 3 real gaps (`mut` cadence value; hop2 membership with an unknown followee; `Ring.id` never read → five StringLiteral survivors), 2 equivalent/unreachable (revgate's redundant `=== undefined`; rings' `?? []` on a mutual's snapshot) removed by simplifying the code. Round 2: **100%** (97 killed, 0 survived, 0 uncovered). Supply-chain rung: stryker 10.0.0 (Apache-2.0) pulled `qs` 6.15.1 with three dev-only advisories, all fixed in 6.16.0 → `overrides: { qs: "6.16.0" }` rather than an ignore; the pre-existing vitest 2.1.9 advisories stay under the repo's recorded `osv-scanner.toml` ignore. The M1 config commit had left lint red (`vitest.stryker.config.ts` not in tsconfig `include`); caught and fixed in the triage commit before push.
 
 Not a phase: a periodic audit per the house rules (global `CLAUDE.md` § Testing Principles,
 "Mutation testing — the check on the check"), expected on a rules engine like this trio.
@@ -1425,3 +1437,10 @@ than assumed: the dry-tag run uses the push trigger, which runs the file at the 
   `pds-walker-v0.0.0-dry` refused at the compare step (run 34292595469, no release, tag
   deleted). Evidence: `RUN-PDS-WALKER-01-SUMMARY.md`. Next: claim + PR for G1 (ask before
   merge), then 2a.
+- 2026-09-08 — **Execution, G2 (2a–2c, M1).** Three REDs observed as `X is not a function`
+  (vitest ESM interop), not the predicted SyntaxError — same information, different text;
+  no plan change. 2c's first commit was red and was amended before push (the chain did not
+  stop on failure; every later chain uses `&&`). M1: 90.1% → 100% in two rounds, three real
+  gaps closed, two equivalent mutants removed by simplification (the honest kill). Decisions:
+  `overrides.qs = 6.16.0` (fix over ignore); tsconfig `include` gains the stryker config.
+  Evidence: `RUN-PDS-WALKER-02-SUMMARY.md`.

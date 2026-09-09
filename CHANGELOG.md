@@ -11,6 +11,11 @@ Contexts: site · pds-walker
 
 ## 2026-09
 
+- 2026-09-08 **pds-walker:** the pure core lands — `rings()` computes five nested rings from
+  repo snapshots (`hop` is everyone your mutuals follow, `hop2` everyone your follows follow),
+  `decide()` is the rev gate (keep / relist / unknown), and `defaultPolicy` · `due()` ·
+  `ring2Targets()` are the cadence. Mutation-tested to 100% (stryker, dev-only; `qs`
+  overridden to 6.16.0 for its advisories). No network yet. (plan 2026-09-08, G2)
 - 2026-09-08 **pds-walker:** croft-pwa is now also a **package**. `npm run build:lib` emits
   `lib/pds-walker/` (the gate runs it first), `package.json` exposes it as
   `croft-pwa/pds-walker` through `exports`, ships only `lib/` through `files`, and builds it on
