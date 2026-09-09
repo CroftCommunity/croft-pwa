@@ -2,7 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** EXECUTING — G1 landed (`4e8e528`); G2 (2a, 2b, 2c, M1) shipped 2026-09-08 on `claude/pds-walker-g2`, landing; 3a next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
+**Status:** EXECUTING — G1 (`4e8e528`) and G2 (`3b51aba`) landed; G3 (3a, 3b, 3c, M2, 3d) shipped 2026-09-08 on `claude/pds-walker-g3`, landing; 4a next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
 
 Format note: this plan follows the `phase-plan` skill's template (Problem · Reasoning ·
 Verified Assumptions · Documentation Impact · Concurrency Map · Phases with call chain,
@@ -15,6 +15,11 @@ ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer
 
 | phase | outcome | commit | note |
 |---|---|---|---|
+| 3a | ✅ | `4c643bd` | resolveDid over resolvePds; lib/atproto/read.js emitted |
+| 3b | ✅ | `00f76b2` | latestRev, listFollows (three-page cursor shape) |
+| 3c | ✅ | `84fc88d` | per-host limiter in the path; defaultLogger |
+| M2 | ✅ | `a79f214` | 82.6% → 98.3%; two real defects fixed |
+| 3d | ✅ | `9569a45` | createFetchTransport; live journey 14 follows |
 | 2a | ✅ | `3318779` | five rings, hop and hop2, honest asOf; seeded property test |
 | 2b | ✅ | `cac6ed7` | the rev gate |
 | 2c | ✅ | `6ea5741` | cadence, resolvePolicy, due, ring2Targets |
@@ -622,7 +627,9 @@ Not a phase: a periodic audit per the house rules (global `CLAUDE.md` § Testing
 
 ---
 
-### Phase 3a: transport — identity resolution
+### Phase 3a: transport — identity resolution — ✅ SHIPPED (`4c643bd`, rebased; M2 `f605617`)
+
+**Delivered (2026-09-08):** a wrapper over `resolvePds` as Pass 2 specified. The emit consequence is observed: `build:lib` emits `lib/atproto/read.{js,d.ts}`. The test file first failed to transform (a stray `)` in the harvested OpenDNS string — a typo, fixed before the RED was read); RED then `resolveDid is not a function`. After M2 the `AtprotoReadError` branch was collapsed into the `Error` branch (same message).
 
 **Goal:** `did:plc` and `did:web` → PDS endpoint, or `unknown`.
 **Changes:**
@@ -647,7 +654,9 @@ reason must be human-readable on its own (the test's two rows above pin that).
 **Done when:** (1) resolution through the export with an injected fetch; (2) the vitest file; `npm test`.
 **Validation:** Narrow.
 
-### Phase 3b: transport — the PDS calls
+### Phase 3b: transport — the PDS calls — ✅ SHIPPED (`00f76b2`; M2 `88e9b84`, `f605617`, `a79f214`)
+
+**Delivered (2026-09-08):** as specified, plus a harvested shape the plan did not know: the reference PDS returns a cursor on the LAST page of records too, and the page after it is empty with no cursor — the loop stops on a missing or empty cursor (three pages in the test). Lint caught type-safety slips before commit (`Did | string`, unguarded body reads, `Array.isArray` not narrowing a readonly union, an `any` from `expect.stringMatching`). M2 found a real defect: `hostOf` was handed the full URL, so a reason named the URL, not the host.
 
 **Goal:** `latestRev` and `listFollows` (paged) against a PDS, honest on failure.
 **Changes:**
@@ -667,7 +676,9 @@ tests/unit/pds-walker-pds.test.ts` — expected `does not provide an export name
 **Done when:** (1) a two-page walk through the export yields both pages' subjects; (2) the vitest file; `npm test`.
 **Validation:** Narrow.
 
-### Phase 3c: transport — the per-host limiter
+### Phase 3c: transport — the per-host limiter — ✅ SHIPPED (`84fc88d`; M2 `88e9b84`, `f605617`)
+
+**Delivered (2026-09-08):** both REDs observed (module missing; then the module present with `pds.ts` ignoring `deps.limiter` — the concurrency and pause cases failed, proving the limiter is in the path). Deviation: the plan's wiring case ("two page fetches of one `listFollows`") cannot be concurrent — pages are cursor-chained — so the case is two concurrent `listFollows` calls to one host. M2 found a real defect: `Number(null)` is 0, so a response with only `RateLimit-Reset` would have paused the host; both headers are now required. The resume log's redundant condition was removed.
 
 **Goal:** never more than N in flight per PDS host; back off when `RateLimit-Remaining` is low.
 **Changes:**
@@ -688,7 +699,9 @@ transport/limiter'` (the module import) and, once the module exists but `pds.ts`
 **Validation:** Narrow.
 **Logging:** as above (pause/resume at warn/info, host only).
 
-### Checkpoint M2 (after 3c): mutation testing of `transport/limiter.ts` — inserted in Pass 3
+### Checkpoint M2 (after 3c): mutation testing of `transport/limiter.ts` — inserted in Pass 3 — ✅ DONE (`88e9b84` → `a79f214`)
+
+**Delivered (2026-09-08):** widened to `transport/limiter.ts`, `pds.ts`, `resolve.ts` (cheap). Rounds: 82.55% → 94.33% → 97.65% → **98.32%** (283 killed, 10 timeouts, 5 survived, 0 uncovered). Two real defects found (above), ~15 real test gaps closed, three equivalent branches collapsed. The five survivors are recorded equivalents: a no-op default sleep busy-waits to the same reset; the `resetRaw === null` guard is shadowed by the `until <= pausedUntil` return; a junk `records` default is skipped; a non-object page body's `.records` is undefined either way; an explicit `undefined` `fetchImpl` defaults identically under `resolvePds`. One triage commit first carried two red tests (the chain did not stop) and was amended before push; every later chain runs under a fail-fast script.
 
 Same tool, same rules as M1 (commit the 3c green state first; read survivors; triage in
 the Review Log). `stryker.config.json` `mutate` widens to `src/pds-walker/transport/
@@ -697,7 +710,9 @@ mostly URL strings the 3a/3b edges already pin — include them only if the run 
 The limiter is threshold-and-boundary code (`< 10`, `perHost`, `reset`), exactly where a
 green suite hides a hole. Done when the triage is recorded and `npm test` is green.
 
-### Phase 3d: transport — the export, and one live journey
+### Phase 3d: transport — the export, and one live journey — ✅ SHIPPED (`9569a45`)
+
+**Delivered (2026-09-08):** as specified; OQ3 → bsky.app's DID. Live run (list reporter): `[live] pds=https://puffball.us-east.host.bsky.network rev=3muzvzlycuh2v follows=14`, `1 passed (1.6s)`.
 
 **Goal:** the transport is reachable through the export path, and one real PDS answers.
 **Changes:**
@@ -1444,3 +1459,11 @@ than assumed: the dry-tag run uses the push trigger, which runs the file at the 
   gaps closed, two equivalent mutants removed by simplification (the honest kill). Decisions:
   `overrides.qs = 6.16.0` (fix over ignore); tsconfig `include` gains the stryker config.
   Evidence: `RUN-PDS-WALKER-02-SUMMARY.md`.
+- 2026-09-08 — **Execution, G3 (3a–3d, M2).** Two real defects surfaced by mutation
+  testing, not by the phase tests: `hostOf` given the URL (reason named the URL), and
+  `Number(null) === 0` (a lone Reset header would pause a host). A harvested shape the plan
+  lacked: the last page of records carries a cursor; the page after is empty. Deviation:
+  3c's wiring case is two concurrent listings, not two pages of one. Discipline: two chains
+  committed red states before stopping (amended before push); all later chains run under
+  `/tmp/pdsw/phase-chain.sh` (`set -euo pipefail`: build, tests, lint, typecheck). Evidence:
+  `RUN-PDS-WALKER-03-SUMMARY.md`.
