@@ -292,3 +292,20 @@ Counts: 28 unit files / 199 tests; 121 e2e; exit 0.
 - The deliberate-break outputs above (6b-ii); both breaks restored before any commit.
 - The real-network run above (6a-iii (a)).
 - PR preview (6a-iii (c)): filled after the PR's preview deploys — see the addendum at the end of this file.
+
+## Addendum — the PR-preview run (6a-iii (c)), recorded before merge
+
+PR #26 preview at https://croftcommunity.github.io/croft-pwa/pr-preview/pr-26/rings.html — the same drive as the local run, against the real network from the deployed subpath:
+
+```
+status 200 https://croftcommunity.github.io/croft-pwa/pr-preview/pr-26/rings.html
+mut: 12 — as of 8:00:35 PM · complete
+fol: 14 — as of 8:00:35 PM · complete
+hop: 2626 — as of 8:00:35 PM · complete
+hop2: 2630 — as of 8:00:35 PM · complete
+hosts panel: Hosts |  | 14 reached.
+off-bsky hosts reached: losers.club pds.pckt.cafe
+CSP violations: 0 · failed requests: 0 · console lines with did: 0
+```
+
+Identical outcome to the local build: two off-bsky hosts reached through the widened `connect-src`, no CSP violation, no failed request, no DID on the console.
