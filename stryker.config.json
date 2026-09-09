@@ -1,10 +1,20 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "_comment": "M1 (plan 2026-09-08): mutation testing of the pds-walker pure core. Tests import croft-pwa/pds-walker → lib/ (the emitted copy), which stryker does not mutate, so the stryker-only vitest config aliases the export path to src/ (option (a) in the plan). Commit before every round.",
-  "mutate": ["src/pds-walker/core/**/*.ts"],
+  "_comment": "M1 (plan 2026-09-08): mutation testing of the pds-walker pure core. Tests import croft-pwa/pds-walker \u2192 lib/ (the emitted copy), which stryker does not mutate, so the stryker-only vitest config aliases the export path to src/ (option (a) in the plan). Commit before every round. M2 widened mutate to transport/ (limiter is threshold-and-boundary code; pds/resolve included because the run is cheap).",
+  "mutate": [
+    "src/pds-walker/core/**/*.ts",
+    "src/pds-walker/transport/limiter.ts",
+    "src/pds-walker/transport/pds.ts",
+    "src/pds-walker/transport/resolve.ts"
+  ],
   "testRunner": "vitest",
-  "vitest": { "configFile": "vitest.stryker.config.ts" },
-  "reporters": ["clear-text", "progress"],
+  "vitest": {
+    "configFile": "vitest.stryker.config.ts"
+  },
+  "reporters": [
+    "clear-text",
+    "progress"
+  ],
   "tempDirName": ".stryker-tmp",
   "coverageAnalysis": "perTest"
 }

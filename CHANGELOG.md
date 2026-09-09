@@ -11,6 +11,11 @@ Contexts: site · pds-walker
 
 ## 2026-09
 
+- 2026-09-08 **pds-walker:** the fetch transport lands — `createFetchTransport()` resolves a
+  DID to its PDS, reads a repo's rev, and lists its follows page by page, all unauthenticated,
+  each honest on failure (an `unknown` with a readable reason, never a partial list), under a
+  per-host limiter that respects `RateLimit-*` headers. Mutation-tested to 98% (two real
+  defects found that way). Proven once against bsky.app's real PDS. (plan 2026-09-08, G3)
 - 2026-09-08 **pds-walker:** the pure core lands — `rings()` computes five nested rings from
   repo snapshots (`hop` is everyone your mutuals follow, `hop2` everyone your follows follow),
   `decide()` is the rev gate (keep / relist / unknown), and `defaultPolicy` · `due()` ·
