@@ -3,9 +3,10 @@
 // complete answers `{ unknown: reason }`, and a paged listing that fails on page N answers
 // unknown with NOTHING from the pages before it — a partial list would shrink a ring.
 import type { Did, Rev } from '../core/rings';
+import type { Limiter } from './limiter';
 
-/** Injectable fetch. */
-export type PdsDeps = { readonly fetchImpl?: typeof fetch };
+/** Injectable fetch, and the per-host limiter every call runs under (3c). */
+export type PdsDeps = { readonly fetchImpl?: typeof fetch; readonly limiter?: Limiter };
 
 /** The failure shape shared by every transport call. */
 export type Unknown = { readonly unknown: string };
@@ -18,9 +19,14 @@ const fetchOf = (deps: PdsDeps): typeof fetch => deps.fetchImpl ?? globalThis.fe
 
 async function getJson(url: string, deps: PdsDeps): Promise<{ ok: true; body: unknown } | { ok: false; reason: string }> {
   const host = hostOf(url);
+  const doFetch = async (): Promise<Response> => {
+    const r = await fetchOf(deps)(url, { headers: { accept: 'application/json' } });
+    deps.limiter?.observe(host, r);
+    return r;
+  };
   let res: Response;
   try {
-    res = await fetchOf(deps)(url, { headers: { accept: 'application/json' } });
+    res = deps.limiter === undefined ? await doFetch() : await deps.limiter.run(host, doFetch);
   } catch (e) {
     return { ok: false, reason: `${host}: ${e instanceof Error ? e.message : String(e)}` };
   }
