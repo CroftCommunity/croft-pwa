@@ -16,7 +16,7 @@ ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer
 | phase | outcome | commit | note |
 |---|---|---|---|
 | 6c | ✅ | `6005f12` + tag | `pds-walker-v0.1.0`: run 34297765711 green, asset + sha256, consumer install from GitHub proven |
-| 7 | ⏭️ | — | forage adoption, under forage's plan (a tree, not a file; first pin = the tagged sha) |
+| 7 | ✅ | forage `b8878e4` | forage's Beta features switch; pin `6005f12`, vendored tree, graphSource seam |
 | 8 | ⏭️ | — | Jetstream tier, when a poll cost exists to compare against |
 | 6a | ✅ | `86723b3` | the shell, hermetic; page_rings registered (5th file) |
 | 6a-ii | ✅ | `7c756e0` | cspFor(page); rings.html alone connect-src https: |
@@ -1086,7 +1086,9 @@ verification (read its log end to end, `gh run view <id> --log`, not the tick).
 
 ---
 
-### Phase 7: first consumer — forage (shaped here, executed under a forage plan) — ⏭️ DEFERRED to forage's plan
+### Phase 7: first consumer — forage (shaped here, executed under a forage plan) — ✅ DONE 2026-09-08 in forage (`plans/2026-09-08-plan-beta-pds-walker.md`)
+
+**Delivered (2026-09-08, forage):** as an experiment switch (Beta features › "Walk my ring from the data servers", off by default) rather than a wholesale swap. forage pins `github:CroftCommunity/croft-pwa#6005f12…` (this release) as a devDependency and vendors `lib/` whole (22 files, per-file sha256 manifest, `npm run vendor:sync`); a `graphSource` seam on `createLens` takes the walker's answer (`followers := those who follow back`, the same mutuals) with the AppView as the null path.
 
 **Decision 2026-09-08:** out of this plan's execution by its own text ("executed under a forage plan"). Two facts for that plan, learned here: the library is a **tree** (`lib/pds-walker/**` + `lib/atproto/read.js`) with `.js` imports, so "copy the built file" becomes "copy `lib/` whole" or "ship a single-file bundle" (D2 stands either way); and the first pin is `github:CroftCommunity/croft-pwa#6005f12c7c22f7807d54f587ef8960da1825638c` (tag `pds-walker-v0.1.0`). Tracked in croft-pwa `TODO.md` § 3.
 
