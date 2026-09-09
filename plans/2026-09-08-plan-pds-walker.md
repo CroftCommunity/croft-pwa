@@ -2,7 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** EXECUTING — G1 (`4e8e528`) and G2 (`3b51aba`) landed; G3 (3a, 3b, 3c, M2, 3d) shipped 2026-09-08 on `claude/pds-walker-g3`, landing; 4a next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
+**Status:** EXECUTING — G1 (`4e8e528`), G2 (`3b51aba`), G3 (`dbed1b7`) landed; G4 (4a, 4b) shipped 2026-09-08 on `claude/pds-walker-g4`, landing; 5 next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
 
 Format note: this plan follows the `phase-plan` skill's template (Problem · Reasoning ·
 Verified Assumptions · Documentation Impact · Concurrency Map · Phases with call chain,
@@ -15,6 +15,8 @@ ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer
 
 | phase | outcome | commit | note |
 |---|---|---|---|
+| 4a | ✅ | `9ab89e7` | Store seam + memoryStore |
+| 4b | ✅ | `860df23` | indexedDbStore, proven in Chromium via a routed driver |
 | 3a | ✅ | `4c643bd` | resolveDid over resolvePds; lib/atproto/read.js emitted |
 | 3b | ✅ | `00f76b2` | latestRev, listFollows (three-page cursor shape) |
 | 3c | ✅ | `84fc88d` | per-host limiter in the path; defaultLogger |
@@ -734,7 +736,9 @@ messages here.
 
 ---
 
-### Phase 4a: the store — interface and memory
+### Phase 4a: the store — interface and memory — ✅ SHIPPED (`9ab89e7`)
+
+**Delivered (2026-09-08):** as specified; RED `memoryStore is not a function`. Equal `fetchedAt` replaces (a re-list at the same instant is newer information); older never does.
 
 **Goal:** `Store` as the persistence seam; a memory implementation for tests and Node.
 **Changes:**
@@ -752,7 +756,9 @@ tests/unit/pds-walker-store.test.ts` — expected `does not provide an export na
 **Done when:** (1) the memory store round-trips through the export; (2) the vitest file; `npm test`.
 **Validation:** Narrow.
 
-### Phase 4b: the store — IndexedDB, proven in a browser
+### Phase 4b: the store — IndexedDB, proven in a browser — ✅ SHIPPED (`860df23`)
+
+**Delivered (2026-09-08):** exactly the Pass 2 mechanism — the driver bundled in the spec with the esbuild API, served by `page.route` at a same-origin URL, no `bypassCSP`. RED from the esbuild step, verbatim as predicted. The e2e count is 108 now.
 
 **Goal:** the same `Store` over IndexedDB, proven in Playwright (not a fake).
 **Changes:**
@@ -1467,3 +1473,6 @@ than assumed: the dry-tag run uses the push trigger, which runs the file at the 
   committed red states before stopping (amended before push); all later chains run under
   `/tmp/pdsw/phase-chain.sh` (`set -euo pipefail`: build, tests, lint, typecheck). Evidence:
   `RUN-PDS-WALKER-03-SUMMARY.md`.
+- 2026-09-08 — **Execution, G4 (4a, 4b).** Both as specified; the routed-driver mechanism
+  Pass 2 designed for the IndexedDB spec worked first time under the page's real CSP, so
+  the `bypassCSP` fallback stays unused. Evidence: `RUN-PDS-WALKER-04-SUMMARY.md`.

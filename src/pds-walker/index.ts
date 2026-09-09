@@ -11,6 +11,9 @@ export { resolveDid } from './transport/resolve';
 export type { ResolveDeps, Resolved } from './transport/resolve';
 export { latestRev, listFollows } from './transport/pds';
 export type { PdsDeps, Unknown } from './transport/pds';
+export { memoryStore } from './store/memory';
+export type { Store } from './store/memory';
+export { indexedDbStore } from './store/indexeddb';
 
 import { resolveDid as _resolveDid } from './transport/resolve';
 import { latestRev as _latestRev, listFollows as _listFollows } from './transport/pds';
