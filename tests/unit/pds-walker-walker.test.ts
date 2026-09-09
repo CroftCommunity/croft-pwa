@@ -130,6 +130,9 @@ describe('createWalker() — walk', () => {
     const t = fakeTransport({}); const w = createWalker({ transport: t, store: memoryStore(), log: recordingLogger() });
     await w.walk('did:web:example.org'); await w.idle();
     expect(w.hosts()).toEqual([expect.objectContaining({ host: 'example.org', state: 'unknown', reason: 'DID resolution failed: 404' })]);
+    const wp = createWalker({ transport: t, store: memoryStore(), log: recordingLogger() });
+    await wp.walk('did:web:example.org:users:alice'); await wp.idle(); // the path form names the host alone
+    expect(wp.hosts().map((h) => h.host)).toEqual(['example.org']);
     const g: Graph = { [ME]: { pds: 'nonsense', rev: 'r', follows: [] } };
     const t2 = fakeTransport(g); t2.failHosts.add('nonsense');
     const w2 = createWalker({ transport: t2, store: memoryStore(), log: recordingLogger() });
@@ -238,6 +241,11 @@ describe('createWalker() — refresh', () => {
     await w.refresh();
     const info2 = log.lines.filter(([l, a]) => l === 'info' && a[0] === 'pds-walker: refresh').at(-1);
     expect(info2?.[1][1]).toEqual({ due: 3, moved: 0, kept: 2, unknown: 1 });
+    delete t.graph['did:plc:n']; t.failHosts.clear(); now += 10; // N's identity is now unresolvable
+    await w.refresh();
+    const info3 = log.lines.filter(([l, a]) => l === 'info' && a[0] === 'pds-walker: refresh').at(-1);
+    expect(info3?.[1][1]).toEqual({ due: 3, moved: 0, kept: 2, unknown: 1 });
+    expect(w.hosts().find((h) => h.host === 'plc.directory')?.state).toBe('unknown');
   });
   it('when me moved and gained a followee, the new followee is listed too (its subtree is walked)', async () => {
     let now = 10_000_000;
