@@ -80,6 +80,8 @@ const PAGES = [
   },
   { html: 'metrics.html', entry: 'src/pages/metrics.ts', jsToken: '%METRICS_JS%', sriToken: '%METRICS_JS_SRI%' },
   { html: 'atproto.html', entry: 'src/pages/atproto.ts', jsToken: '%ATPROTO_JS%', sriToken: '%ATPROTO_JS_SRI%' },
+  // The pds-walker library's reference page (plan 2026-09-08, G6).
+  { html: 'rings.html', entry: 'src/pages/rings.ts', jsToken: '%RINGS_JS%', sriToken: '%RINGS_JS_SRI%' },
   {
     html: 'content-fetch.html',
     entry: 'src/pages/content-fetch.ts',

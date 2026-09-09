@@ -94,6 +94,13 @@ export const META = {
     disclosure: 'That the atproto (PDA) page was opened',
     info: 'route',
   },
+  page_rings: {
+    type: 'page',
+    description: 'Opened the Rings page (the pds-walker reference page)',
+    expires: '2027-12-31',
+    disclosure: 'That the Rings page was opened',
+    info: 'route',
+  },
   page_content_fetch: {
     type: 'page',
     description: 'Opened the content-fetch chapter',
