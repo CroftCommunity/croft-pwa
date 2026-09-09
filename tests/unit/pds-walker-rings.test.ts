@@ -46,11 +46,14 @@ describe('rings() — five nested rings from repo snapshots', () => {
     expect(partial.mut.members).toEqual(full.mut.members);
     expect(partial.hop.members).toEqual(full.hop.members);
     expect(partial.fol.members).toEqual(full.fol.members);
+    // M1: hop2 with F unknown holds exactly what the present sources say — no X, and nothing invented.
+    expect(partial.hop2.members).toEqual(new Set([ME, M, F, Y]));
   });
 
   it('with no snapshot for me at all, every ring is {me}, incomplete, asOf 0', () => {
     const r = rings({ me: ME, snapshots: [] });
     for (const id of RING_IDS) {
+      expect(r[id].id).toBe(id); // M1: every ring carries its own id
       expect([...r[id].members]).toEqual([ME]);
       expect(r[id].complete).toBe(false);
       expect(r[id].asOf).toBe(0);

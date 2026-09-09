@@ -16,6 +16,6 @@ export type Verdict = 'keep' | 'relist' | 'unknown';
  */
 export function decide({ snapshot, latestRev }: { readonly snapshot: RepoSnapshot | undefined; readonly latestRev: LatestRev }): Verdict {
   if (snapshot === undefined) return 'relist';
-  if (latestRev === undefined || typeof latestRev !== 'string') return 'unknown';
+  if (typeof latestRev !== 'string') return 'unknown'; // undefined and { unknown } alike
   return latestRev === snapshot.rev ? 'keep' : 'relist';
 }

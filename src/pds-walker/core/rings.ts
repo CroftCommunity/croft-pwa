@@ -68,12 +68,15 @@ export function rings({ me, snapshots }: { readonly me: Did; readonly snapshots:
   const mine = byDid.get(me);
   const follows: readonly Did[] = mine?.follows ?? [];
   const followeeSnaps = follows.map((f) => byDid.get(f));
-  const mutuals = follows.filter((f) => byDid.get(f)?.follows.includes(me) ?? false);
+  // A mutual is a followee whose snapshot lists me — so every mutual HAS a snapshot, by
+  // construction; resolving them here keeps the hop union free of an unreachable branch.
+  const mutualSnaps = followeeSnaps.filter((s): s is RepoSnapshot => s !== undefined && s.follows.includes(me));
+  const mutuals = mutualSnaps.map((s) => s.did);
 
   const meSet = new Set<Did>([me]);
   const mutSet = new Set<Did>([...meSet, ...mutuals]);
   const folSet = new Set<Did>([...mutSet, ...follows]);
-  const hopSet = new Set<Did>([...folSet, ...mutuals.flatMap((m) => byDid.get(m)?.follows ?? [])]);
+  const hopSet = new Set<Did>([...folSet, ...mutualSnaps.flatMap((s) => s.follows)]);
   const hop2Set = new Set<Did>([...hopSet, ...follows.flatMap((f) => byDid.get(f)?.follows ?? [])]);
 
   const graph = [mine, ...followeeSnaps];

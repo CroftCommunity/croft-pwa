@@ -11,6 +11,7 @@ describe('defaultPolicy — the research § 4 cadence', () => {
     expect(defaultPolicy.refreshMs.hop2).toBe(defaultPolicy.refreshMs.hop);
     expect(defaultPolicy.refreshMs.me).toBe(60_000);
     expect(defaultPolicy.refreshMs.fol).toBe(10 * 60_000);
+    expect(defaultPolicy.refreshMs.mut).toBe(10 * 60_000); // M1: a `10 / MINUTE` mutant survived without this row
     expect(defaultPolicy.refreshMs.hop).toBe(24 * 60 * 60_000);
     expect(defaultPolicy.perHostConcurrency).toBe(4);
     expect(defaultPolicy.ring2Parallel).toBe(10);
