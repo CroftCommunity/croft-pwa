@@ -547,3 +547,15 @@ dialog.signin-sheet::backdrop {
   color: var(--ink);
   font: inherit;
 }
+
+/* Rings (plan 2026-09-08, G6): the pds-walker reference page. */
+.ring-form { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+.ring-form input { flex: 1 1 12rem; min-height: 44px; padding: 0 0.75rem; font: inherit; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--surface); color: var(--ink); }
+.ring-progress { margin-top: 0.5rem; color: var(--ink-muted); }
+.ring-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.75rem; }
+.ring-card h2 { margin: 0 0 0.25rem; }
+.ring-count { font-size: 2rem; font-weight: 700; margin: 0; line-height: 1.1; }
+.ring-asof { margin: 0 0 0.5rem; color: var(--ink-muted); }
+.ring-more { margin: 0.75rem 0; }
+.ring-more > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; padding: 0 0.5rem; }
+.ring-more[open] > summary { margin-bottom: 0.75rem; }
