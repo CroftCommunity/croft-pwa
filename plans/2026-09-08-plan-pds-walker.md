@@ -2,7 +2,7 @@
 
 date: 2026-09-08
 identity: chasemp (`chase@owasp.org`, `github-personal`), repo `CroftCommunity/croft-pwa`
-**Status:** EXECUTING — G1 (`4e8e528`), G2 (`3b51aba`), G3 (`dbed1b7`) landed; G4 (4a, 4b) shipped 2026-09-08 on `claude/pds-walker-g4`, landing; 5 next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
+**Status:** EXECUTING — G1 (`4e8e528`), G2 (`3b51aba`), G3 (`dbed1b7`), G4 (`81a78cd`) landed; G5 (5, M3) shipped 2026-09-08 on `claude/pds-walker-g5`, landing; 6a next. Passes 1–3 complete (see Review Log); D1–D3, OQ1–OQ9 decided.
 
 Format note: this plan follows the `phase-plan` skill's template (Problem · Reasoning ·
 Verified Assumptions · Documentation Impact · Concurrency Map · Phases with call chain,
@@ -15,6 +15,8 @@ ordinal, `Status:` line, Review Log). Where the two disagree the workspace layer
 
 | phase | outcome | commit | note |
 |---|---|---|---|
+| 5 | ✅ | `164752d` | createWalker: walk, refresh, hosts, events, stop; load + idle added |
+| M3 | ✅ | `aa43ccd` | 68.6% → 99.0% on walker.ts; ESM extension defect found and fixed |
 | 4a | ✅ | `9ab89e7` | Store seam + memoryStore |
 | 4b | ✅ | `860df23` | indexedDbStore, proven in Chromium via a routed driver |
 | 3a | ✅ | `4c643bd` | resolveDid over resolvePds; lib/atproto/read.js emitted |
@@ -787,7 +789,9 @@ worth having on a storage seam that degrades soft elsewhere in this repo.
 
 ---
 
-### Phase 5: the walker
+### Phase 5: the walker — ✅ SHIPPED (`164752d`; M3 `60d06cd`, `bf361ff`, `aa43ccd`)
+
+**Delivered (2026-09-08):** the surface as fixed, plus two additions: `load(me)` (answer from a warm store with no network) and `idle()` (await the background fill — the deterministic hook the tests needed instead of an injected scheduler). `Transport` now lives in `walker.ts` and `index.ts` re-exports it. One real defect on the first green (a host whose rev could not be read before any snapshot existed was not marked unknown), and one rule the plan lacked: a `me` with no snapshot is always due on refresh, so a transient failure at the root is retried. **Discovery, outside the tests:** the emitted `lib/` imported `./core/rings` without an extension — resolvable by vitest and esbuild, `ERR_MODULE_NOT_FOUND` in plain Node and in any browser serving the files unbundled. Every relative import in `src/pds-walker` now carries `.js`, and the export test spawns plain Node to import the package. Consequence for Phase 7: forage cannot copy "the built file" — the library is a tree — so `vendor:sync` copies `lib/` whole or the package ships a single-file bundle (decide in forage's plan). Validation run (real transport, bsky.app, console logger): ring 1 in 551 ms; every ring complete in 2.5 s across 13 hosts; mut 13 · fol 15 · hop 2,627 · hop2 2,631; message set = 1 debug + 5 info lines, no DID at info/warn, no line per followee.
 
 **Goal:** `createWalker()` wires core + transport + store + clock into the public surface.
 **Changes:**
@@ -828,7 +832,9 @@ case RED before its code, rebuild between; GREEN. Then `npm test`.
 **Validation:** Moderate — plus one manual Node run against the real transport for a small public account (recorded in the Review Log). *Pass 3:* the Node run passes a console-backed logger and the recorded output is the first real look at the message set — read it for noise (a line per followee is a defect) and for any DID at info/warn (a defect the unit test should have caught; if it appears, the test's regex is wrong first).
 **Logging:** as itemised in the `walker.ts` bullet.
 
-### Checkpoint M3 (after 5): mutation testing of `walker.ts` — inserted in Pass 3
+### Checkpoint M3 (after 5): mutation testing of `walker.ts` — inserted in Pass 3 — ✅ DONE (`60d06cd` → `aa43ccd`)
+
+**Delivered (2026-09-08):** rounds 68.6% → 91.2% → 97.1% → **99.0%** on `walker.ts` (201 killed, 1 timeout, 2 survived; all files 98.6%). The first round's survivors were mostly one gap — an unasserted event sequence — plus unread return values and guards on values defined by construction, removed by structure (a discriminated `RevCheck`, movers carrying their pds/rev, `compute`/`fill` taking `who`). Real rows added (~15). The two survivors are recorded equivalents: `stopped`'s initial value (`load` resets it) and the exhaustive `else if` on the last verdict.
 
 Same rules as M1 (commit the 5 green state first; every round; read survivors; triage in
 the Review Log). `stryker.config.json` `mutate` gains `src/pds-walker/walker.ts`. The walker
@@ -1476,3 +1482,11 @@ than assumed: the dry-tag run uses the push trigger, which runs the file at the 
 - 2026-09-08 — **Execution, G4 (4a, 4b).** Both as specified; the routed-driver mechanism
   Pass 2 designed for the IndexedDB spec worked first time under the page's real CSP, so
   the `bypassCSP` fallback stays unused. Evidence: `RUN-PDS-WALKER-04-SUMMARY.md`.
+- 2026-09-08 — **Execution, G5 (5, M3).** The walker's first green hid a real defect (a
+  rev failure before any snapshot left the host unmarked) and the plan lacked a retry rule
+  for a root that failed at walk time; both fixed with tests. M3's first round (68.6%) was
+  mostly one missing assertion — the exact event sequence — and the fix also removed three
+  unreachable guards by restructuring. **The important discovery was outside the tests:**
+  the emitted ESM had extensionless relative imports, which every tool in the gate
+  tolerated and plain Node did not; the gate now spawns Node to import the package. This
+  changes Phase 7's shape (a tree, not a file). Evidence: `RUN-PDS-WALKER-05-SUMMARY.md`.
