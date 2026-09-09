@@ -112,3 +112,34 @@ test.describe('rings.html — the page walks (6a-iii)', () => {
     expect(consoleLines.some((t) => t.includes('pds-walker: walk') && t.includes(ME))).toBe(true);
   });
 });
+
+// 6b: the gating half — hermetic axe in both themes, a phone width with no sideways scroll,
+// the two new tap targets at the 44 px floor, and the Standards tab current on this page.
+import AxeBuilder from '@axe-core/playwright';
+test.describe('rings.html — gated (6b)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`a11y (${theme}): no serious/critical axe violations, hermetically`, async ({ page }) => {
+      await page.addInitScript((t) => { try { localStorage.setItem('croft-theme', t); } catch { /* private mode */ } }, theme);
+      await page.route('**/*', (route) => { const h = new URL(route.request().url()).hostname; if (h === 'localhost' || h === '127.0.0.1') void route.continue(); else void route.abort(); });
+      await page.goto('/rings.html', { waitUntil: 'networkidle' });
+      await page.locator('details[data-more-rings] summary').click(); // scan the disclosed cards too
+      const results = await new AxeBuilder({ page }).analyze();
+      const blocking = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id} (${v.impact ?? '?'}) × ${v.nodes.length}`);
+      expect(blocking, blocking.join(' · ')).toEqual([]);
+    });
+  }
+  test('at 390 px: no horizontal overflow, and the disclosure summary and the Walk button are ≥ 44 px tall', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/rings.html');
+    const overflows = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflows).toBe(false);
+    for (const sel of ['details[data-more-rings] summary', '[data-testid="rings-walk"]', '[data-testid="rings-handle"]']) {
+      const h = await page.locator(sel).evaluate((n) => Math.round(n.getBoundingClientRect().height));
+      expect(h, `${sel} height`).toBeGreaterThanOrEqual(44);
+    }
+  });
+  test('the Standards tab is current on this page', async ({ page }) => {
+    await page.goto('/rings.html');
+    await expect(page.locator('nav a[aria-current="page"]')).toHaveText('Standards');
+  });
+});
