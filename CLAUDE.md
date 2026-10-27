@@ -78,7 +78,7 @@ CI is immune (it never reuses a server).
   and transient toasts only.
 - **Mobile-first, tap-first.** `tests/e2e/mobile-fit.spec.ts` guards horizontal
   overflow at 320/360/390px — run it after any layout change. Touch targets ≥44px
-  (WCAG 2.5.5; the workspace floor — `CroftC/.claude/MOBILE-FIRST.md`).
+  (WCAG 2.5.5; the workspace floor — [`docs/MOBILE-FIRST.md`](docs/MOBILE-FIRST.md)).
 - **Fail loud, degrade soft in the right places.** A programming error throws
   (a missing `#app` is a bug). A denied cosmetic capability (storage in private
   mode) degrades to a default rather than bricking the page.
@@ -126,13 +126,14 @@ P2 standards content pages (chassis/brand/pwa/agent-method) · P3 (done — `doc
 module (OAuth/DPoP/lexicons/sealed-box) + `@live` tier · P4 telemetry posture
 chapter. Each phase leaves the gate green.
 
-Git identity here is chasemp (`chase@owasp.org`, `github-personal`). Do not
-commit or push unless asked.
+Git identity here is chasemp (`chase@owasp.org`, `github-personal`). Commit on a
+`claude/*` branch, push and open the PR without asking; ask before merging
+(`CroftC/.claude/COORDINATION.md` commit matrix).
 
 ## Concurrent sessions (workspace norm)
 
 Multiple agent sessions share the `CroftC/` workspace. Do multi-turn work in a dedicated
-worktree — `git -C croft-pwa worktree add ../worktrees/croft-pwa/<slug> -b claude/<slug>` — never in
-this checkout (peer sessions stage with `git add -A`; loose files get swept into unrelated
+worktree — `git -C croft-pwa worktree add ../worktrees/<feature>/croft-pwa -b claude/<feature>` — never in
+this checkout (stage by path, never `git add -A`; loose files get swept into unrelated
 commits). Contested surfaces here — claim in `CroftC/.coordination/claims/` before
 touching: **landing on `main`** (it is the CI reference implementation — `docs/CI.md` changes ripple workspace-wide). Full protocol and the reasons behind it: `CroftC/.claude/COORDINATION.md`.

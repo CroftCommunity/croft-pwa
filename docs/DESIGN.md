@@ -309,22 +309,22 @@ handle path through to a completed token exchange), `tests/live/signin-providers
 `CroftC/.claude/bin/workspace-audit.sh` check 45 (copy nouns, registry presence), proved
 RED on four harvested fixtures by `bin/test-signin-copy.sh`.
 
-## What is not met yet — recorded, not accommodated
+## What is not met yet — sign-in: one residual (surveyed 2026-08-29, rechecked 2026-10-27)
 
 Surveyed 2026-08-29 across every repo with a sign-in surface (`CroftC/.claude/PATTERN.md`
-step 1: prescribe, and write the gap down where it is):
+step 1: prescribe, and write the gap down where it is). Every gap the survey found closed
+within a day; each row below names the landing that closed it.
 
 | Repo | Container | Provider choice | Create | Noun today | Meets § Flows › Sign in |
 |---|---|---|---|---|---|
 | **croft-pwa** (this) | native `<dialog>` sheet on `atproto.html` | registry (4) + handle | yes (`prompt=create`) | atmo provider | **yes** — reference |
-| **forage** | native `<dialog>` sheet + sidebar card + masthead one-tap | registry (`js/auth/hosts.js`, 4) + handle | yes | atmo provider (PR #15; two "atproto server" sentences outside the sheet fixed there) | yes, once #15 lands |
-| **bluebird** | inline form on `patrol.html` + feed banner | handle only (`your handle, e.g. you.bsky.social`) | no | *Sign in with Bluesky*, *Your Bluesky handle*, *PDS host (optional)* | **no** — noun, no registry, no create |
-| **arecipe** | dedicated `signin.html` page | handle only | no | *Sign in with your Bluesky handle* | **no** — noun, no registry, no create (page container is a legitimate variant; the sheet is an exception, not a mandate) |
-| **greetings_site** | inline form on the create view | handle only (`you.bsky.social`) | no | *Sign in with your Bluesky handle to make a card*, label *Bluesky handle* | **no** — noun, no registry, no create. Not in the survey at all; check 45 found it on its first run, which is the argument for a check over a survey |
+| **forage** | native `<dialog>` sheet + sidebar card + masthead one-tap | registry (`js/auth/hosts.js`, 4) + handle | yes | atmo provider | **yes** — PR #15 merged 2026-08-30 (`cf0f7aa`) |
+| **bluebird** | the workspace sheet, opened from `patrol.html` and the feed banner | registry + handle | yes | atmo provider | **yes, except one signed-out hint** — the sheet landed 2026-08-29 (`d9215d5`, "choose your atmo provider"); `src/sponsor.ts` still says *Sign in with Bluesky above to publish this record to your PDS.* (tracked in bluebird's `TODO.md`) |
+| **arecipe** | dedicated `signin.html` page | registry + handle | yes | atmo provider | **yes** — landed 2026-08-29 (`d4af842`, "choose your atmo provider"; arecipe `TODO.md` marks it done 2026-08-30). The page container is a legitimate variant; the sheet is an exception, not a mandate |
+| **greetings_site** | sign-in view on the create flow | registry + handle | yes | atmo provider | **yes** — landed 2026-08-29 (`ad43125`, "choose your atmo provider"). Not in the original survey; check 45 found it on its first run, which is the argument for a check over a survey |
 | fun | — | — | — | — | n/a (no accounts) |
 | connect | — (web resolver only) | — | — | — | n/a |
 
-The gaps in bluebird, arecipe and greetings_site are real and stand unweakened; each
-carries a TODO in its own repo citing this section, and check 45 will keep saying so until
-the copy changes. `discovery` is skipped by the check by name: it is thinking, proofs and
-spikes, and the hit there was an unpacked seed bundle nobody ships.
+The one residual is bluebird's signed-out hint in `src/sponsor.ts`; it stands unweakened
+until that copy changes, and its TODO lives in bluebird. `discovery` is skipped by the check
+by name: it is thinking, proofs and spikes, and the hit there was an unpacked seed bundle nobody ships.
